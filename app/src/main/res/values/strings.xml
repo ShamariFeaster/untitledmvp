@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">UntitledMVP</string>
+    <string name="facebook_app_id">960590164001572</string>
+
+<!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="title_activity_chat">ChatActivity</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_profile">Profileactivity</string>
+    <string name="action_like">Like</string>
+    <string name="action_dislike">Dislike</string>
+    <string name="title_activity_match">MatchActivity</string>
+    <string name="title_activity_chat_list">ChatListActivity</string>
+
+    <string name="menu_option_matches">Matches</string>
+    <string name="menu_option_swipe">Swipe</string>
+    <string name="menu_option_my_profile">My Profile</string>
+</resources>

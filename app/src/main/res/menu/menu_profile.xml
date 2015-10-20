@@ -1,0 +1,13 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="fjd.com.untitledmvp.activities.ProfileActivity">
+    <item android:id="@+id/action_matches" android:title="@string/menu_option_matches"
+    android:orderInCategory="100" app:showAsAction="never" />
+
+    <item android:id="@+id/action_swipe" android:title="@string/menu_option_swipe"
+        android:orderInCategory="100" app:showAsAction="never" />
+
+    <item android:id="@+id/action_my_profile" android:title="@string/menu_option_my_profile"
+        android:orderInCategory="100" app:showAsAction="never" />
+</menu>

@@ -1,0 +1,21 @@
+<resources>
+
+    <!-- Strings related to login -->
+    <string name="prompt_email">Email</string>
+    <string name="prompt_password">Password (optional)</string>
+    <string name="action_sign_in">Sign in with email</string>
+    <string name="action_sign_up">Sign up with email</string>
+    <string name="action_sign_in_short">Sign in with email</string>
+    <string name="action_sign_in_with_fb">Sign in with Facebook</string>
+    <!-- ERROR MESSAGES -->
+    <string name="error_invalid_email">This email address is invalid</string>
+    <string name="error_email_taken">This email address is taken</string>
+    <string name="error_invalid_password">This password is too short</string>
+    <string name="error_incorrect_password">This password is incorrect</string>
+    <string name="error_field_required">This field is required</string>
+
+    <string name="error_pw_wrong">Incorrect password</string>
+
+    <string name="error_user_no_exist">Username not found</string>
+    <string name="action_log_out">Log out</string>
+</resources>
