@@ -33,4 +33,5 @@ dependencies {
     compile 'com.facebook.android:facebook-android-sdk:4.6.0'
     compile 'com.firebase:firebase-ui:0.1.0'
     compile 'com.firebase:geofire:1.1.0'
+    compile files('libs/picasso-2.5.2.jar')
 }

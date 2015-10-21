@@ -10,7 +10,7 @@ import com.firebase.client.Firebase;
 
 import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.activities.ChatActivity;
-import fjd.com.untitledmvp.dummy.DummyContent;
+
 import fjd.com.untitledmvp.helper.MatchListAdapter;
 import fjd.com.untitledmvp.util.Constants;
 
@@ -78,7 +78,7 @@ public class MatchListItemFragment extends ListFragment {
         if (null != mListener) {
             // Notify the active callbacks interface (the activity, if the
             // fragment is attached to one) that an item has been selected.
-            mListener.onFragmentInteraction(DummyContent.ITEMS.get(position).id);
+            mListener.onFragmentInteraction("");
         }
     }
 

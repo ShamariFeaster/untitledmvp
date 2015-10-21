@@ -63,16 +63,7 @@ public class MatchFragment extends Fragment {
 
     }
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        View v = inflater.inflate(R.layout.fragment_match, container, false);
-        final Handler uiHandler = new Handler();
-        mProspectImage = (ImageView) v.findViewById(R.id.imageProspect);
-        Button mBtnLike = (Button) v.findViewById(R.id.action_like);
-        Button mBtnDisLike = (Button) v.findViewById(R.id.action_dislike);
-
+    private void fetchProspectsAsync(){
         mMatches = mGeoWrapper.Query(0,0,0);
         Log.e(TAG, "SPAWNING");
         mImageManager.fetchCacheAsync();
@@ -94,11 +85,22 @@ public class MatchFragment extends Fragment {
             });
 
         }
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+        // Inflate the layout for this fragment
+        View v = inflater.inflate(R.layout.fragment_match, container, false);
+        final Handler uiHandler = new Handler();
+        mProspectImage = (ImageView) v.findViewById(R.id.imageProspect);
+        Button mBtnLike = (Button) v.findViewById(R.id.action_like);
+        Button mBtnDisLike = (Button) v.findViewById(R.id.action_dislike);
 
         mBtnLike.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                mCurrentProspect = mSharedBitmapQueue.poll();
                 if(mCurrentProspect != null){
                     final Map<String, Object> update = new HashMap<>();
                     final String uid = mCurrentProspect.key.uid;
@@ -156,7 +158,6 @@ public class MatchFragment extends Fragment {
                             //part[0] is passed to chatActivity keys message queue to listen to
                         }
                     });
-                    mCurrentProspect = mSharedBitmapQueue.poll();
                     setCurrProspect(mProspectImage, mCurrentProspect);
                 }
 
@@ -166,11 +167,11 @@ public class MatchFragment extends Fragment {
         mBtnDisLike.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mCurrentProspect = mSharedBitmapQueue.poll();
                 if(mCurrentProspect != null){
                     final Map<String, Object> update = new HashMap<>();
                     update.put(Constants.MOCK_UID,1);
                     mFBRef.child("users").child(Constants.MOCK_UID).child("dislikes").updateChildren(update);
-                    mCurrentProspect = mSharedBitmapQueue.poll();
                     setCurrProspect(mProspectImage, mCurrentProspect);
                 }
 
@@ -205,7 +206,42 @@ public class MatchFragment extends Fragment {
     @Override
     public void onStart(){
         super.onStart();
+        if(mImageManager == null){
+            mImageManager = new ImageManager(getActivity().getApplicationContext()
+                    , mSharedImageKeyQueue
+                    ,mSharedBitmapQueue);
+        }
+        mImageManager.fetchCacheAsync();
+    }
 
+    @Override
+    public void onStop(){
+        super.onStop();
+        mImageManager.StopLooper();
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        mImageManager.StopLooper();
+    }
+
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        mImageManager.StopLooper();
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        if(mImageManager == null){
+            mImageManager = new ImageManager(getActivity().getApplicationContext()
+                    , mSharedImageKeyQueue
+                    ,mSharedBitmapQueue);
+
+        }
+        fetchProspectsAsync();
     }
 
     @Override
