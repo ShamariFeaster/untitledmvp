@@ -18,6 +18,10 @@ android {
         }
     }
 
+    repositories {
+        jcenter()
+    }
+
     packagingOptions {
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/LICENSE-FIREBASE.txt'
@@ -33,5 +37,6 @@ dependencies {
     compile 'com.facebook.android:facebook-android-sdk:4.6.0'
     compile 'com.firebase:firebase-ui:0.1.0'
     compile 'com.firebase:geofire:1.1.0'
+    compile 'com.isseiaoki:simplecropview:1.0.9'
     compile files('libs/picasso-2.5.2.jar')
 }

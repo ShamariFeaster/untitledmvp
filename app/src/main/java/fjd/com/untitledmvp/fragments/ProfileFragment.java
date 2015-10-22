@@ -31,6 +31,7 @@ import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
 import com.firebase.client.ValueEventListener;
+import com.isseiaoki.simplecropview.CropImageView;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +39,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.util.Constants;
@@ -59,7 +59,9 @@ public class ProfileFragment extends Fragment {
     private ProgressBar mProgress;
     private Firebase mFBRef;
     private String uid = Constants.MOCK_UID;
-
+    private CropImageView mCropImageView;
+    private Button mCropButton;
+    private Button mTakePicButton;
     public ProfileFragment() { }
 
     private void dispatchTakePictureIntent() {
@@ -107,27 +109,7 @@ public class ProfileFragment extends Fragment {
         return image;
     }
 
-    private void setPic() {
-        // Get the dimensions of the View
-        int targetW = mImageView.getWidth();
-        int targetH = mImageView.getHeight();
-
-        // Get the dimensions of the bitmap
-        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
-        bmOptions.inJustDecodeBounds = true;
-        bmOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;
-
-        int photoW = bmOptions.outWidth;
-        int photoH = bmOptions.outHeight;
-
-        // Determine how much to scale down the image
-        int scaleFactor = Math.min(photoW/targetW, photoH/targetH);
-
-        // Decode the image file into a Bitmap sized to fill the View
-        bmOptions.inJustDecodeBounds = false;
-        bmOptions.inSampleSize = scaleFactor;
-
-        Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
+    private void uploadToS3(){
         TransferObserver observer = mTransferUtility.upload(
                 MY_BUCKET,     /* The bucket to upload to */
                 mImagefileName,    /* The key for the uploaded object */
@@ -171,14 +153,39 @@ public class ProfileFragment extends Fragment {
 
         });
 
-        mImageView.setImageBitmap(bitmap);
     }
 
+    private void toggleButtons(){
+        if(mTakePicButton.getVisibility() == View.GONE){
+            mTakePicButton.setVisibility(View.VISIBLE);
+        }else{
+            mTakePicButton.setVisibility(View.GONE);
+        }
+
+        if(mCropButton.getVisibility() == View.GONE){
+            mCropButton.setVisibility(View.VISIBLE);
+        }else{
+            mCropButton.setVisibility(View.GONE);
+        }
+    }
+
+    private void launchCropping() {
+
+        final Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath);
+        mCropImageView.setImageBitmap(bitmap);
+        toggleButtons();
+
+    }
+
+    private void onCroppingFinished(){
+        toggleButtons();
+        mImageView.setImageBitmap(mCropImageView.getCroppedBitmap());
+    }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == getActivity().RESULT_OK) {
-            setPic();
+            launchCropping();
         }
     }
 
@@ -198,11 +205,21 @@ public class ProfileFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_profile, container, false);
-        Button takePicture = (Button) v.findViewById(R.id.action_take_picture);
+        mTakePicButton = (Button) v.findViewById(R.id.action_take_picture);
         mImageView = (ImageView) v.findViewById(R.id.image_preview);
         mProgress = (ProgressBar) v.findViewById(R.id.progressbar_s3);
+        mCropImageView = (CropImageView) v.findViewById(R.id.cropImageView);
+        mCropButton = (Button) v.findViewById(R.id.action_crop);
+
+        mCropButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                onCroppingFinished();
+            }
+        });
         mProgress.setVisibility(View.GONE);
-        takePicture.setOnClickListener(new View.OnClickListener() {
+
+        mTakePicButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 dispatchTakePictureIntent();
