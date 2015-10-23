@@ -34,12 +34,13 @@ import com.firebase.client.ValueEventListener;
 import com.isseiaoki.simplecropview.CropImageView;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
+import java.io.OutputStream;
 import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.util.Constants;
 
@@ -51,6 +52,7 @@ public class ProfileFragment extends Fragment {
 
     private static final int REQUEST_IMAGE_CAPTURE = 1;
     private String mCurrentPhotoPath = "";
+    private String mNewPhotoPath = "";
     private ImageView mImageView = null;
     private String mImagefileName = "";
     final private String TAG = "ProfileFragment";
@@ -70,6 +72,7 @@ public class ProfileFragment extends Fragment {
             File photoFile = null;
             try {
                 photoFile = createTempImageFile(null);
+                mNewPhotoPath = photoFile.getAbsolutePath();
             } catch (IOException ex) {
                 // Error occurred while creating the File
                 Log.d(TAG, "ERROR creating image. " + ex.getMessage());
@@ -78,6 +81,7 @@ public class ProfileFragment extends Fragment {
             if (photoFile != null) {
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
                         Uri.fromFile(photoFile));
+
                 startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
             }
         }
@@ -105,15 +109,27 @@ public class ProfileFragment extends Fragment {
                 storageDir      /* directory */
         );
 
-        mCurrentPhotoPath = image.getAbsolutePath();
         return image;
     }
 
-    private void uploadToS3(){
+
+    private void uploadToS3(Bitmap bm){
+        File croppedImgFile = null;
+        OutputStream outStream = null;
+
+        try {
+            croppedImgFile = createTempImageFile(null);
+            outStream = new FileOutputStream(croppedImgFile);
+            bm.compress(Bitmap.CompressFormat.PNG, 100, outStream);
+            outStream.flush();
+            outStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         TransferObserver observer = mTransferUtility.upload(
                 MY_BUCKET,     /* The bucket to upload to */
                 mImagefileName,    /* The key for the uploaded object */
-                new File(mCurrentPhotoPath)        /* The file where the data to upload exists */
+                croppedImgFile        /* The file where the data to upload exists */
         );
 
         observer.setTransferListener(new TransferListener(){
@@ -128,7 +144,7 @@ public class ProfileFragment extends Fragment {
                 }
 
                 if(state == TransferState.COMPLETED){
-                    Toast.makeText(ProfileFragment.this.getActivity(), "Upload Finished", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ProfileFragment.this.getActivity(), "Profile Pic saved", Toast.LENGTH_SHORT).show();
                     mProgress.setVisibility(View.GONE);
                     Map<String, Object> imageMeta = new HashMap<String, Object>();
                     imageMeta.put("key", mImagefileName);
@@ -155,11 +171,17 @@ public class ProfileFragment extends Fragment {
 
     }
 
-    private void toggleButtons(){
+    private void toggleImageModes(){
         if(mTakePicButton.getVisibility() == View.GONE){
             mTakePicButton.setVisibility(View.VISIBLE);
         }else{
             mTakePicButton.setVisibility(View.GONE);
+        }
+
+        if(mImageView.getVisibility() == View.GONE){
+            mImageView.setVisibility(View.VISIBLE);
+        }else{
+            mImageView.setVisibility(View.GONE);
         }
 
         if(mCropButton.getVisibility() == View.GONE){
@@ -167,19 +189,38 @@ public class ProfileFragment extends Fragment {
         }else{
             mCropButton.setVisibility(View.GONE);
         }
+
+        if(mCropImageView.getVisibility() == View.GONE){
+            mCropImageView.setVisibility(View.VISIBLE);
+        }else{
+            mCropImageView.setVisibility(View.GONE);
+        }
     }
-
+    /*
+    * The image we receive from the camera intent is displayed, unscaled, in the cropper. After
+     *  the user crops the image, scale it down to desired resolution (size) using
+     *  Bitmap.createScaledBitmap(Bitmap src, int dstWidth, int dstHeight, boolean filter). The
+     *  return value from that function is what we cache remotely (s3) and locally (Picasso).
+     *
+     *  The image returned from the Camera intent will be portrait and the cropped image will be
+     *  square. USe ImageView.ScaleType.Center or android:scaleType="center" in xml
+    *
+    * */
     private void launchCropping() {
-
-        final Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath);
+        //mCurrentPhotoPath is no good here b/c it gets updated async by s3 fetch - need alternative
+        final Bitmap bitmap = BitmapFactory.decodeFile(mNewPhotoPath);
         mCropImageView.setImageBitmap(bitmap);
-        toggleButtons();
+        toggleImageModes();
 
     }
 
     private void onCroppingFinished(){
-        toggleButtons();
-        mImageView.setImageBitmap(mCropImageView.getCroppedBitmap());
+        Bitmap croppedBm = mCropImageView.getCroppedBitmap();
+        mImageView.setImageBitmap(croppedBm);
+        toggleImageModes();
+        /*We need to write the cropped bit map to a temp file and send that file to S3*/
+        uploadToS3(croppedBm);
+
     }
 
     @Override
@@ -235,6 +276,7 @@ public class ProfileFragment extends Fragment {
                     //I should be checking for the file locally before fetching from Amazon
                     try {
                         File image = createTempImageFile(currentImageKey);
+                        mCurrentPhotoPath = image.getAbsolutePath();
                         TransferObserver observer = mTransferUtility.download(
                                 MY_BUCKET,     /* The bucket to upload to */
                                 currentImageKey,    /* The key for the uploaded object */
@@ -255,24 +297,7 @@ public class ProfileFragment extends Fragment {
                                 if (state == TransferState.COMPLETED) {
                                     Toast.makeText(ProfileFragment.this.getActivity(), "Download Finished", Toast.LENGTH_SHORT).show();
                                     mProgress.setVisibility(View.GONE);
-                                    int targetW = mImageView.getWidth();
-                                    int targetH = mImageView.getHeight();
-
-                                    // Get the dimensions of the bitmap
-                                    BitmapFactory.Options bmOptions = new BitmapFactory.Options();
-                                    bmOptions.inJustDecodeBounds = true;
-                                    bmOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;
-
-                                    int photoW = bmOptions.outWidth;
-                                    int photoH = bmOptions.outHeight;
-
-                                    // Determine how much to scale down the image
-                                    int scaleFactor = Math.min(photoW / targetW, photoH / targetH);
-
-                                    // Decode the image file into a Bitmap sized to fill the View
-                                    bmOptions.inJustDecodeBounds = false;
-                                    bmOptions.inSampleSize = scaleFactor;
-                                    Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
+                                    Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath);
                                     mImageView.setImageBitmap(bitmap);
                                 }
 

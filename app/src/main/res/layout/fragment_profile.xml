@@ -16,9 +16,11 @@
         android:id="@+id/cropImageView"
         xmlns:custom="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
-        android:layout_height="250dp"
+        android:layout_height="0px"
+        android:layout_weight="3"
         android:padding="16dp"
         custom:cropMode="ratio_1_1"
+        android:visibility="gone"
         />
 
     <ImageView
@@ -26,6 +28,7 @@
         android:layout_height="0px"
         android:id="@+id/image_preview"
         android:layout_weight="3"
+        android:scaleType="center"
         android:src="@mipmap/ic_launcher" />
 
     <Button
