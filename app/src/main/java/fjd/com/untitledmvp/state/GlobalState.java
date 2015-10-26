@@ -18,9 +18,11 @@ public class GlobalState extends Application {
 
     public String getCurrUid(){
         return (CurrUser == null) ? Constants.MOCK_UID : CurrUser.uid;
-
     }
 
+    public String getCurrFn(){
+        return (CurrUser == null) ? Constants.MOCK_FN : CurrUser.getFn();
+    }
     @Override
     public void onCreate() {
         super.onCreate();

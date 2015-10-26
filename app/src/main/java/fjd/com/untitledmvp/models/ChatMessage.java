@@ -6,9 +6,9 @@ import java.util.Date;
  * Created by WZHJTN on 10/7/2015.
  */
 public class ChatMessage {
-    private long timestamp;
-    private  String text;
-    private String sender;
+    private long timestamp = 0;
+    private  String text = "Say Hello!";
+    private String sender = "";
 
     public ChatMessage(){};
 

@@ -26,6 +26,7 @@ import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.helper.GeoQueryWrapper;
 import fjd.com.untitledmvp.helper.ImageManager;
 import fjd.com.untitledmvp.helper.Pair;
+import fjd.com.untitledmvp.models.ChatMessage;
 import fjd.com.untitledmvp.models.User;
 import fjd.com.untitledmvp.state.GlobalState;
 import fjd.com.untitledmvp.util.Constants;
@@ -169,8 +170,9 @@ public class MatchFragment extends Fragment {
                             //part[0] is passed to chatActivity keys message queue to listen to
                         }
                     });
-                    setCurrProspect(mProspectImage, mCurrentProspect);
+
                     mCurrentProspect = mSharedBitmapQueue.poll();
+                    setCurrProspect(mProspectImage, mCurrentProspect);
                 }
 
             }
@@ -182,10 +184,11 @@ public class MatchFragment extends Fragment {
 
                 if(mCurrentProspect != null){
                     final Map<String, Object> update = new HashMap<>();
-                    update.put(mUid,1);
+                    update.put(mUid, 1);
                     mFBRef.child("users").child(mUid).child("dislikes").updateChildren(update);
-                    setCurrProspect(mProspectImage, mCurrentProspect);
                     mCurrentProspect = mSharedBitmapQueue.poll();
+                    setCurrProspect(mProspectImage, mCurrentProspect);
+
                 }
 
             }

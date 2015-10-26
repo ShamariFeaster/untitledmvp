@@ -23,6 +23,7 @@ import com.facebook.FacebookException;
 import com.facebook.GraphRequest;
 import com.facebook.GraphResponse;
 import com.facebook.HttpMethod;
+import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
 import com.firebase.client.AuthData;
 import com.firebase.client.DataSnapshot;
@@ -64,6 +65,7 @@ public class LoginActivity extends Activity  {
     private CallbackManager callbackManager;
     private Firebase mFBRef;
     private AccessToken mFBKToken = null;
+    private LoginButton mLoginButton;
     private static final String TAG = "LoginActivity";
 
     @Override
@@ -73,10 +75,19 @@ public class LoginActivity extends Activity  {
         FacebookSdk.sdkInitialize(getApplicationContext());
         mFBRef = new Firebase(Constants.FBURL);
         callbackManager = CallbackManager.Factory.create();
-
         setContentView(R.layout.activity_login);
 
-        authWithFBToken(AccessToken.getCurrentAccessToken());
+        Intent intent = getIntent();
+        String logoutKey = intent.getStringExtra(Constants.LOGOUT_KEY);
+        mLoginFormView = findViewById(R.id.login_form);
+        mProgressView = findViewById(R.id.login_progress);
+
+        if(logoutKey != null){
+            performLogout();
+        }else{
+            authWithFBToken(AccessToken.getCurrentAccessToken());
+        }
+
 
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
@@ -117,42 +128,29 @@ public class LoginActivity extends Activity  {
         LogoutBtn.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View view) {
-                showProgress(true);
-                mFBRef.unauth();
-                AccessToken token = AccessToken.getCurrentAccessToken();
-                /* make the API call */
-                new GraphRequest(
-                        token,
-                        "/" + token.getUserId() + "/permissions",
-                        null,
-                        HttpMethod.DELETE,
-                        new GraphRequest.Callback() {
-                            public void onCompleted(GraphResponse response) {
-                                showProgress(false);
-                            }
-                        }
-                ).executeAsync();
+                performLogout();
             }
         });
 
-        LoginButton loginButton = (LoginButton) findViewById(R.id.login_button);
+        mLoginButton = (LoginButton) findViewById(R.id.login_button);
 
-        loginButton.setOnClickListener(new OnClickListener() {
+        mLoginButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 showProgress(true);
             }
         });
-        loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+
+        mLoginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
                 // App code
-                showProgress(false);
+
                 AuthData auth = mFBRef.getAuth();
-                if(auth == null){
+                if (auth == null) {
                     Log.d(TAG, "Authenticating with Facebook");
                     authWithFBToken(loginResult.getAccessToken());
-                }else{
+                } else {
                     Log.d(TAG, "User already authenticated by other means");
                 }
 
@@ -160,19 +158,39 @@ public class LoginActivity extends Activity  {
 
             @Override
             public void onCancel() {
-                showProgress(false);
+
                 Log.d(TAG, "Facebook Login Canceled");
             }
 
             @Override
             public void onError(FacebookException exception) {
-                showProgress(false);
+
                 Log.d(TAG, "Facebook Login failed: " + exception.getMessage());
             }
         });
 
-        mLoginFormView = findViewById(R.id.login_form);
-        mProgressView = findViewById(R.id.login_progress);
+
+    }
+
+    public void performLogout(){
+
+        mFBRef.unauth();
+
+        AccessToken token = AccessToken.getCurrentAccessToken();
+
+        new GraphRequest(
+                token,
+                "/" + token.getUserId() + "/permissions",
+                null,
+                HttpMethod.DELETE,
+                new GraphRequest.Callback() {
+                    public void onCompleted(GraphResponse response) {
+                        LoginManager.getInstance().logOut();
+                    }
+                }
+        ).executeAsync();
+
+
     }
 
     @Override
@@ -185,6 +203,7 @@ public class LoginActivity extends Activity  {
         final AccessToken _token = token;
 
         if (_token != null) {
+
             mFBRef.authWithOAuthToken("facebook", token.getToken(), new Firebase.AuthResultHandler() {
 
                 @Override
@@ -216,6 +235,7 @@ public class LoginActivity extends Activity  {
                                     }
                                     //firebase id is "facebook:<facebook uid>"
                                     initProfileInDb(_FIBuid, email, fn, ln);
+
                                 }
                             }
                     ).executeAsync();
@@ -225,6 +245,7 @@ public class LoginActivity extends Activity  {
                 @Override
                 public void onAuthenticationError(FirebaseError firebaseError) {
                     Log.d(TAG, "ERROR: Firebase Not Authenticated with Facebook");
+
                 }
             });
         } else {
@@ -369,6 +390,7 @@ public class LoginActivity extends Activity  {
                 }
 
                 Intent intent = new Intent(getApplicationContext(), ProfileActivity.class);
+
                 startActivity(intent);
             }
 
@@ -409,7 +431,7 @@ public class LoginActivity extends Activity  {
                     public void onSuccess(Map<String, Object> result) {
                         initProfileInDb((String) result.get("uid"), mEmail);
                         mAuthTask = null;
-                        showProgress(false);
+
                         Log.d(TAG, "_Successfully created user account with uid: " + result.get("uid"));
                     }
 
@@ -459,7 +481,6 @@ public class LoginActivity extends Activity  {
         @Override
         protected void onPostExecute(final Boolean success) {
             mAuthTask = null;
-            showProgress(false);
 
             if (success) {
                 //finish();
@@ -469,7 +490,7 @@ public class LoginActivity extends Activity  {
         @Override
         protected void onCancelled() {
             mAuthTask = null;
-            showProgress(false);
+
         }
     }
 
@@ -496,7 +517,7 @@ public class LoginActivity extends Activity  {
                     public void onAuthenticated(AuthData authData) {
                         Log.d(TAG, "_User ID: " + authData.getUid() + ", Provider: " + authData.getProvider());
                         mAuthTask = null;
-                        showProgress(false);
+
                     }
 
                     @Override
@@ -543,7 +564,7 @@ public class LoginActivity extends Activity  {
         @Override
         protected void onPostExecute(final Boolean success) {
             mAuthTask = null;
-            showProgress(false);
+
 
             if (success) {
                 finish();
@@ -553,7 +574,7 @@ public class LoginActivity extends Activity  {
         @Override
         protected void onCancelled() {
             mAuthTask = null;
-            showProgress(false);
+
         }
     }
 
@@ -581,7 +602,7 @@ public class LoginActivity extends Activity  {
         @Override
         protected void onPostExecute(final Boolean success) {
             mAuthTask = null;
-            showProgress(false);
+
 
             if (success) {
                 finish();
@@ -591,7 +612,7 @@ public class LoginActivity extends Activity  {
         @Override
         protected void onCancelled() {
             mAuthTask = null;
-            showProgress(false);
+
         }
     }
 }

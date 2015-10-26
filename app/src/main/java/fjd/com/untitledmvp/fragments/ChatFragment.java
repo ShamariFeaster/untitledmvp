@@ -24,6 +24,7 @@ import com.firebase.client.ValueEventListener;
 import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.helper.ChatListAdapter;
 import fjd.com.untitledmvp.models.ChatMessage;
+import fjd.com.untitledmvp.state.GlobalState;
 import fjd.com.untitledmvp.util.Constants;
 
 /**
@@ -43,6 +44,7 @@ public class ChatFragment extends Fragment {
     private ChatListAdapter mChatListAdapter;
     private ValueEventListener mConnectedListener;
     private String mUsername = "";
+    private GlobalState mState;
 
     private static final String ARG_PARAM1 = "myUserName";
     /**
@@ -91,7 +93,8 @@ public class ChatFragment extends Fragment {
         mFBChatRef = new Firebase(Constants.FBURL)
                 .child("messages")
                 .child(convoID);
-        mUsername = mFBChatRef.getAuth().getUid();//getArguments().getString(ARG_PARAM1);
+        mState = (GlobalState) mContext;
+        mUsername = mState.getCurrFn();
     }
 
     @Override

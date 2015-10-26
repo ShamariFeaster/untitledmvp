@@ -16,4 +16,5 @@
     <string name="menu_option_matches">Matches</string>
     <string name="menu_option_swipe">Swipe</string>
     <string name="menu_option_my_profile">My Profile</string>
+    <string name="menu_option_logout">Logout</string>
 </resources>

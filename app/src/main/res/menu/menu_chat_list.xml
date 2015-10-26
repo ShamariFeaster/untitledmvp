@@ -10,4 +10,7 @@
 
     <item android:id="@+id/action_my_profile" android:title="@string/menu_option_my_profile"
         android:orderInCategory="100" app:showAsAction="never" />
+
+    <item android:id="@+id/action_logout" android:title="@string/menu_option_logout"
+        android:orderInCategory="100" app:showAsAction="never" />
 </menu>

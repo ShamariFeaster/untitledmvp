@@ -7,6 +7,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 import fjd.com.untitledmvp.R;
+import fjd.com.untitledmvp.util.Constants;
 
 public class ProfileActivity extends AppCompatActivity {
 
@@ -44,6 +45,11 @@ public class ProfileActivity extends AppCompatActivity {
 
             case R.id.action_my_profile:
                 intent = new Intent(getApplicationContext(), ProfileActivity.class);
+                break;
+
+            case R.id.action_logout:
+                intent = new Intent(getApplicationContext(), LoginActivity.class);
+                intent.putExtra(Constants.LOGOUT_KEY, "1");
                 break;
         }
 
