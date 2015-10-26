@@ -1,5 +1,6 @@
 package fjd.com.untitledmvp.fragments;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -9,6 +10,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
+import android.support.v4.graphics.BitmapCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -42,7 +44,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.io.OutputStream;
 import fjd.com.untitledmvp.R;
+
+import fjd.com.untitledmvp.state.GlobalState;
 import fjd.com.untitledmvp.util.Constants;
+import fjd.com.untitledmvp.util.Util;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -58,9 +63,10 @@ public class ProfileFragment extends Fragment {
     final private String TAG = "ProfileFragment";
     final private String MY_BUCKET = "untitled-mvp-images";
     private TransferUtility mTransferUtility = null;
-    private ProgressBar mProgress;
+    private View mProgress;
     private Firebase mFBRef;
-    private String uid = Constants.MOCK_UID;
+    private GlobalState mState;
+    private String mUid;
     private CropImageView mCropImageView;
     private Button mCropButton;
     private Button mTakePicButton;
@@ -113,7 +119,7 @@ public class ProfileFragment extends Fragment {
     }
 
 
-    private void uploadToS3(Bitmap bm){
+    private void uploadToS3(final Bitmap bm){
         File croppedImgFile = null;
         OutputStream outStream = null;
 
@@ -139,17 +145,15 @@ public class ProfileFragment extends Fragment {
                 // do something
 
                 if(state == TransferState.IN_PROGRESS){
-                    mProgress.setVisibility(View.VISIBLE);
-                    mProgress.setProgress(0);
                 }
 
                 if(state == TransferState.COMPLETED){
                     Toast.makeText(ProfileFragment.this.getActivity(), "Profile Pic saved", Toast.LENGTH_SHORT).show();
-                    mProgress.setVisibility(View.GONE);
                     Map<String, Object> imageMeta = new HashMap<String, Object>();
                     imageMeta.put("key", mImagefileName);
                     imageMeta.put("timestamp", new Date().getTime());
                     mFBRef.updateChildren(imageMeta);
+                    mState.Cache.set(mImagefileName, bm);
                 }
 
 
@@ -158,7 +162,6 @@ public class ProfileFragment extends Fragment {
             @Override
             public void onProgressChanged(int id, long bytesCurrent, long bytesTotal) {
                 int percentage = (int) (bytesCurrent/bytesTotal * 100);
-                mProgress.setProgress(percentage);
 
             }
 
@@ -216,10 +219,14 @@ public class ProfileFragment extends Fragment {
 
     private void onCroppingFinished(){
         Bitmap croppedBm = mCropImageView.getCroppedBitmap();
-        mImageView.setImageBitmap(croppedBm);
+        int before = BitmapCompat.getAllocationByteCount(croppedBm);
+        Bitmap scaledDown = Bitmap.createScaledBitmap(croppedBm, 225, 225, true);
+        int after = BitmapCompat.getAllocationByteCount(scaledDown);
+        croppedBm.recycle();
+        Log.d(TAG, "Before: " + before + " After: " + after);
+        mImageView.setImageBitmap(scaledDown);
         toggleImageModes();
-        /*We need to write the cropped bit map to a temp file and send that file to S3*/
-        uploadToS3(croppedBm);
+        uploadToS3(scaledDown);
 
     }
 
@@ -229,17 +236,44 @@ public class ProfileFragment extends Fragment {
             launchCropping();
         }
     }
+    @Override
+    public void onStart(){
+        super.onStart();
+    }
+
+    @Override
+    public void onStop(){
+        super.onStop();
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+    }
+
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Context ctx = getActivity().getApplicationContext();
         //NOTE: setting context multiple places. Should remove upon creation of base class.
-        Firebase.setAndroidContext(getContext());
+        Firebase.setAndroidContext(ctx);
         BasicAWSCredentials creds = new BasicAWSCredentials(Constants.AWS_KEY, Constants.AWS_SECRET);
         AmazonS3 s3 = new AmazonS3Client(creds);
         s3.setRegion(Region.getRegion(Regions.US_EAST_1));
         mTransferUtility = new TransferUtility(s3, getContext());
-        mFBRef = new Firebase(Constants.FBURL).child("users").child(uid).child("image");
+        mState = (GlobalState) ctx;
+        mUid = mState.getCurrUid();
+        mFBRef = new Firebase(Constants.FBURL).child("users").child(mUid).child("image");
     }
 
     @Override
@@ -248,17 +282,19 @@ public class ProfileFragment extends Fragment {
         View v = inflater.inflate(R.layout.fragment_profile, container, false);
         mTakePicButton = (Button) v.findViewById(R.id.action_take_picture);
         mImageView = (ImageView) v.findViewById(R.id.image_preview);
-        mProgress = (ProgressBar) v.findViewById(R.id.progressbar_s3);
+        mProgress =  v.findViewById(R.id.progress_overlay);
         mCropImageView = (CropImageView) v.findViewById(R.id.cropImageView);
         mCropButton = (Button) v.findViewById(R.id.action_crop);
 
+        //mCropImageView.setMinFrameSizeInDp(250);
+        retrieveImgFromS3();
+        mCropImageView.setGuideShowMode(CropImageView.ShowMode.NOT_SHOW);
         mCropButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 onCroppingFinished();
             }
         });
-        mProgress.setVisibility(View.GONE);
 
         mTakePicButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -267,58 +303,72 @@ public class ProfileFragment extends Fragment {
             }
         });
 
+
+
+
+        return v;
+    }
+
+    private void retrieveImgFromS3(){
         mFBRef.child("key").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 // do some stuff once
-                String currentImageKey = (String) snapshot.getValue();
+                final String currentImageKey = (String) snapshot.getValue();
                 if (!currentImageKey.equalsIgnoreCase(Constants.NO_IMAGE_YET)) {
                     //I should be checking for the file locally before fetching from Amazon
-                    try {
-                        File image = createTempImageFile(currentImageKey);
-                        mCurrentPhotoPath = image.getAbsolutePath();
-                        TransferObserver observer = mTransferUtility.download(
-                                MY_BUCKET,     /* The bucket to upload to */
-                                currentImageKey,    /* The key for the uploaded object */
-                                image        /* The file where the data to upload exists */
-                        );
+                    Bitmap profileBitmap = mState.Cache.get(currentImageKey);
+                    if(profileBitmap != null){
+                        mImageView.setImageBitmap(profileBitmap);
+                        Log.d(TAG, "Getting profile image from MEMORY");
+                    }else{
+                        Log.d(TAG, "Getting profile image from REMOTE");
+                        try {
+                            File image = createTempImageFile(currentImageKey);
+                            mCurrentPhotoPath = image.getAbsolutePath();
+                            TransferObserver observer = mTransferUtility.download(
+                                    MY_BUCKET,     /* The bucket to upload to */
+                                    currentImageKey,    /* The key for the uploaded object */
+                                    image        /* The file where the data to upload exists */
+                            );
 
-                        observer.setTransferListener(new TransferListener() {
+                            observer.setTransferListener(new TransferListener() {
 
-                            @Override
-                            public void onStateChanged(int id, TransferState state) {
-                                // do something
+                                @Override
+                                public void onStateChanged(int id, TransferState state) {
+                                    // do something
 
-                                if (state == TransferState.IN_PROGRESS) {
-                                    mProgress.setVisibility(View.VISIBLE);
-                                    mProgress.setProgress(0);
+                                    if (state == TransferState.IN_PROGRESS) {
+                                        Util.alphaAnimate(mProgress, View.VISIBLE, 0.4f, 200);
+                                    }
+
+                                    if (state == TransferState.COMPLETED) {
+                                        //Toast.makeText(ProfileFragment.this.getActivity(), "Download Finished", Toast.LENGTH_SHORT).show();
+                                        Util.alphaAnimate(mProgress, View.GONE, 0, 200);
+                                        Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath);
+                                        mImageView.setImageBitmap(bitmap);
+                                        mState.Cache.set(mImagefileName, bitmap);
+                                    }
+
+
                                 }
 
-                                if (state == TransferState.COMPLETED) {
-                                    Toast.makeText(ProfileFragment.this.getActivity(), "Download Finished", Toast.LENGTH_SHORT).show();
-                                    mProgress.setVisibility(View.GONE);
-                                    Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath);
-                                    mImageView.setImageBitmap(bitmap);
+                                @Override
+                                public void onProgressChanged(int id, long bytesCurrent, long bytesTotal) {
+                                    int percentage = (int) (bytesCurrent / bytesTotal * 100);
+
                                 }
 
-
-                            }
-
-                            @Override
-                            public void onProgressChanged(int id, long bytesCurrent, long bytesTotal) {
-                                int percentage = (int) (bytesCurrent / bytesTotal * 100);
-                                mProgress.setProgress(percentage);
-
-                            }
-
-                            @Override
-                            public void onError(int id, Exception ex) {
-                                Log.d(TAG, "S3 ERROR: Download failed");
-                            }
-                        });
-                    } catch (IOException ex) {
-                        Log.d(TAG, "Failed to create temp file for download.");
+                                @Override
+                                public void onError(int id, Exception ex) {
+                                    Log.d(TAG, "S3 ERROR: Download failed");
+                                }
+                            });
+                        } catch (IOException ex) {
+                            Log.d(TAG, "Failed to create temp file for download.");
+                        }
                     }
+
                 }
             }
 
@@ -326,8 +376,5 @@ public class ProfileFragment extends Fragment {
             public void onCancelled(FirebaseError firebaseError) {
             }
         });
-
-
-        return v;
     }
 }

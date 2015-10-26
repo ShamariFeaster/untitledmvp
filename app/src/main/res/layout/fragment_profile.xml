@@ -4,13 +4,8 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".ProfileActivity">
-    <ProgressBar
-        android:id="@+id/progressbar_s3"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        style="@android:style/Widget.ProgressBar.Horizontal"
-        android:layout_marginRight="5dp"
-        android:visibility="gone" />
+
+    <include layout="@layout/include_spinner"/>
 
     <com.isseiaoki.simplecropview.CropImageView
         android:id="@+id/cropImageView"
@@ -28,7 +23,7 @@
         android:layout_height="0px"
         android:id="@+id/image_preview"
         android:layout_weight="3"
-        android:scaleType="center"
+        android:scaleType="centerCrop"
         android:src="@mipmap/ic_launcher" />
 
     <Button

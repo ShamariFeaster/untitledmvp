@@ -27,7 +27,9 @@ import fjd.com.untitledmvp.helper.GeoQueryWrapper;
 import fjd.com.untitledmvp.helper.ImageManager;
 import fjd.com.untitledmvp.helper.Pair;
 import fjd.com.untitledmvp.models.User;
+import fjd.com.untitledmvp.state.GlobalState;
 import fjd.com.untitledmvp.util.Constants;
+import fjd.com.untitledmvp.util.Util;
 
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -47,7 +49,10 @@ public class MatchFragment extends Fragment {
     private ImageView mProspectImage;
     private Button mBtnLike;
     private Button mBtnDisLike;
+    private String mUid;
+    private GlobalState mState;
     private Pair<User, Bitmap> mCurrentProspect;
+    private View mProgressOverlay;
     private String TAG = "OUTPUT";
     public MatchFragment() {
         // Required empty public constructor
@@ -94,13 +99,19 @@ public class MatchFragment extends Fragment {
         View v = inflater.inflate(R.layout.fragment_match, container, false);
         final Handler uiHandler = new Handler();
         mProspectImage = (ImageView) v.findViewById(R.id.imageProspect);
+        mProgressOverlay = v.findViewById(R.id.progress_overlay);
+        Util.alphaAnimate(mProgressOverlay,View.VISIBLE, 0.4f, 200);
         Button mBtnLike = (Button) v.findViewById(R.id.action_like);
         Button mBtnDisLike = (Button) v.findViewById(R.id.action_dislike);
 
         mBtnLike.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mCurrentProspect = mSharedBitmapQueue.poll();
+                /*if this prospect == last prospect, we should spawn thread that will poll for a finite
+                * time, then post results to ui. Issue I'm seeing is user likes/dislikes before 2nd
+                 * image is put in queue which causes the click to do nothing. This solution will
+                 * show loading dialog while waiting for next photo or show "out of prospects" if we
+                 * timeout w/ no new prospects.*/
                 if(mCurrentProspect != null){
                     final Map<String, Object> update = new HashMap<>();
                     final String uid = mCurrentProspect.key.uid;
@@ -109,7 +120,7 @@ public class MatchFragment extends Fragment {
 
                     //add prospect to my likes
                     mFBRef.child("users")
-                            .child(Constants.MOCK_UID)
+                            .child(mUid)
                             .child("likes").updateChildren(update, new Firebase.CompletionListener() {
                         @Override
                         public void onComplete(FirebaseError firebaseError, Firebase firebase) {
@@ -117,17 +128,17 @@ public class MatchFragment extends Fragment {
                             mFBRef.child("users")
                                     .child(uid)
                                     .child("likes")
-                                    .child(Constants.MOCK_UID)
+                                    .child(mUid)
                                     .addListenerForSingleValueEvent(new ValueEventListener() {
                                         @Override
                                         public void onDataChange(DataSnapshot dataSnapshot) {
 
                                             if (dataSnapshot.exists()) {
                                                 update.clear();
-                                                String chatID = Constants.MOCK_UID + "-" + uid;
+                                                String chatID = mUid + "-" + uid;
                                                 String myMatchCompositeKey = chatID + "|" + uid;
-                                                String prospectMatchCompositeKey = chatID + "|" + Constants.MOCK_UID;
-                                                update.put("users/" + Constants.MOCK_UID + "/matches/" + myMatchCompositeKey, Constants.USE_KEY);
+                                                String prospectMatchCompositeKey = chatID + "|" + mUid;
+                                                update.put("users/" + mUid + "/matches/" + myMatchCompositeKey, Constants.USE_KEY);
                                                 update.put("users/" + uid + "/matches/" + prospectMatchCompositeKey, Constants.USE_KEY);
                                                 update.put("messages/" + chatID, Constants.USE_KEY);
                                                 mFBRef.updateChildren(update, new Firebase.CompletionListener() {
@@ -159,6 +170,7 @@ public class MatchFragment extends Fragment {
                         }
                     });
                     setCurrProspect(mProspectImage, mCurrentProspect);
+                    mCurrentProspect = mSharedBitmapQueue.poll();
                 }
 
             }
@@ -167,12 +179,13 @@ public class MatchFragment extends Fragment {
         mBtnDisLike.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mCurrentProspect = mSharedBitmapQueue.poll();
+
                 if(mCurrentProspect != null){
                     final Map<String, Object> update = new HashMap<>();
-                    update.put(Constants.MOCK_UID,1);
-                    mFBRef.child("users").child(Constants.MOCK_UID).child("dislikes").updateChildren(update);
+                    update.put(mUid,1);
+                    mFBRef.child("users").child(mUid).child("dislikes").updateChildren(update);
                     setCurrProspect(mProspectImage, mCurrentProspect);
+                    mCurrentProspect = mSharedBitmapQueue.poll();
                 }
 
             }
@@ -194,6 +207,7 @@ public class MatchFragment extends Fragment {
                 uiHandler.post(new Runnable() {
                     @Override
                     public void run() {
+                        Util.alphaAnimate(mProgressOverlay,View.GONE, 0, 200);
                         setCurrProspect(mProspectImage, mCurrentProspect);
                     }
                 });
@@ -254,6 +268,8 @@ public class MatchFragment extends Fragment {
         mImageManager = new ImageManager(getActivity().getApplicationContext()
                                         , mSharedImageKeyQueue
                                         ,mSharedBitmapQueue);
+        mState = (GlobalState) getActivity().getApplicationContext();
+        mUid = mState.getCurrUid();
         mGeoWrapper = new GeoQueryWrapper(IS_MOCK);
         mFBRef = new Firebase(Constants.FBURL);
     }

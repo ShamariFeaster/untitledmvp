@@ -41,6 +41,7 @@ import java.util.Map;
 
 import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.models.User;
+import fjd.com.untitledmvp.state.GlobalState;
 import fjd.com.untitledmvp.util.Constants;
 
 /**
@@ -191,7 +192,7 @@ public class LoginActivity extends Activity  {
                     Log.d(TAG, "Firebase Authenticated with Facebook");
 
                     final String _FIBuid = authData.getUid();
-                    Constants.MOCK_UID = _FIBuid;
+
                     final Bundle params = new Bundle();
                     params.putString("fields","email,first_name,last_name");
 
@@ -345,10 +346,14 @@ public class LoginActivity extends Activity  {
             mLoginFormView.setVisibility(show ? View.GONE : View.VISIBLE);
         }
     }
+
     public void initProfileInDb(String uid, String email){
         Firebase ref = new Firebase(Constants.FBURL+"/users/"+ uid);
         //surround with try/catch
-        ref.setValue(new User(email, "","",email));
+        GlobalState state = (GlobalState) getApplicationContext();
+        state.CurrUser = new User(email, "","",email);;
+        state.CurrUser.uid = uid;
+        ref.setValue(state.CurrUser);
     }
 
     public void initProfileInDb(final String uid, final String email, final String fn, final String ln){
@@ -357,7 +362,10 @@ public class LoginActivity extends Activity  {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (!dataSnapshot.exists()) {
-                    ref.setValue(new User(email, fn, ln, email));
+                    GlobalState state = (GlobalState) getApplicationContext();
+                    state.CurrUser = new User(email, fn, ln, email);
+                    state.CurrUser.uid = uid;
+                    ref.setValue(state.CurrUser);
                 }
 
                 Intent intent = new Intent(getApplicationContext(), ProfileActivity.class);
