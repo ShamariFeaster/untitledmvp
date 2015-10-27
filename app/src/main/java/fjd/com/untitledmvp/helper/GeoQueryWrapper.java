@@ -20,6 +20,8 @@ public class GeoQueryWrapper {
             results.add("f1429716-e226-4b8e-b538-27f8ec0d92ff");
             results.add("23d4646f-ebf1-43fb-8de1-f198cc268310");
             results.add("73fdc83e-f123-4b83-92dc-acc568c6b5be");
+            results.add("facebook:1006907856026402");
+            results.add("facebook:723263297817907");
         }else{
 
         }

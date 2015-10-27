@@ -382,13 +382,15 @@ public class LoginActivity extends Activity  {
         ref.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
+                GlobalState state = (GlobalState) getApplicationContext();
                 if (!dataSnapshot.exists()) {
-                    GlobalState state = (GlobalState) getApplicationContext();
                     state.CurrUser = new User(email, fn, ln, email);
-                    state.CurrUser.uid = uid;
                     ref.setValue(state.CurrUser);
+                }else{
+                    state.CurrUser = (User) dataSnapshot.getValue(User.class);
                 }
 
+                state.CurrUser.uid = uid;
                 Intent intent = new Intent(getApplicationContext(), ProfileActivity.class);
 
                 startActivity(intent);
