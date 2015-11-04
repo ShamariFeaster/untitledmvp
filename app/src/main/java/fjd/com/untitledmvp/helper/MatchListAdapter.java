@@ -85,7 +85,6 @@ public class MatchListAdapter extends FirebaseListAdapter<String> {
             mFBManager.getLastChatMessage(parts[0], new ValueEventListener() {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
-
                     HashMap<String, String> shell = (HashMap) dataSnapshot.getValue();
                     if (shell != null) {
                         String key = (String) ((HashMap) shell).keySet().toArray()[0];

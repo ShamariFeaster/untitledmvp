@@ -392,7 +392,8 @@ public class LoginActivity extends Activity  {
 
                 state.CurrUser.uid = uid;
                 Intent intent = new Intent(getApplicationContext(), ProfileActivity.class);
-
+                //get my converations
+                //startService(new Intent(LoginActivity.this, Constants.SERVICE_CLASS_TKN));
                 startActivity(intent);
             }
 

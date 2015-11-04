@@ -1,5 +1,9 @@
 package fjd.com.untitledmvp.util;
 
+import android.app.Service;
+
+import fjd.com.untitledmvp.service.ChatListenerService;
+
 /**
  * Created by WZHJTN on 10/2/2015.
  */
@@ -14,4 +18,5 @@ public final class Constants {
     public static String USE_KEY = "-1"; //signal to use key as value
     public static String CONVO_KEY = "convoId";
     public static String LOGOUT_KEY = "logout";
+    public static Class<ChatListenerService> SERVICE_CLASS_TKN = ChatListenerService.class;
 }

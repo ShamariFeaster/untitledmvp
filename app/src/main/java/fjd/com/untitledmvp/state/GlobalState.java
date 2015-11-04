@@ -2,6 +2,7 @@ package fjd.com.untitledmvp.state;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 
 import com.squareup.picasso.Picasso;
@@ -32,6 +33,7 @@ public class GlobalState extends Application {
         Cache = new LruCache(ctx);
         Picasso.setSingletonInstance(new Picasso.Builder(ctx).memoryCache(Cache).build());
         Picasso.with(ctx).setIndicatorsEnabled(true);
+
         //registerActivityLifecycleCallbacks(new ALC());
         //check for polling timer, stop if started
     }

@@ -5,11 +5,20 @@ import android.animation.AnimatorListenerAdapter;
 import android.util.Log;
 import android.view.View;
 
+import fjd.com.untitledmvp.helper.Pair;
+
 /**
  * Created by wzhjtn on 10/21/2015.
  */
 public class Util {
     final private static String TAG = "OTUPUT";
+
+
+    public static Pair<String, String> SplitConvoKey(String key){
+        String[] parts = key.split("\\|");
+        Pair<String, String> pair = new Pair<>("target", parts[1],"convoId", parts[0]);
+        return pair;
+    }
 
     public static void LogExecTime(long start, String msg){
         msg = (msg.isEmpty()) ? msg : msg + " : ";

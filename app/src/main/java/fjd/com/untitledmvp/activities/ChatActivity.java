@@ -21,12 +21,14 @@ public class ChatActivity extends AppCompatActivity {
     protected  void onStart(){
         super.onStart();
         //check if service started, stop it if it is
+        stopService(new Intent(this, Constants.SERVICE_CLASS_TKN));
     }
 
     @Override
     protected void onStop(){
         super.onStop();
-        //check if service stopped, start it if it is
+        //check if service stopped, start it if it i
+        startService(new Intent(this, Constants.SERVICE_CLASS_TKN));
     }
 
     @Override
