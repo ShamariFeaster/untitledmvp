@@ -1,12 +1,15 @@
 package fjd.com.untitledmvp.service;
 
-import android.app.IntentService;
+import android.app.Service;
 import android.content.Intent;
+import android.os.IBinder;
+import android.support.annotation.Nullable;
 
-public class ChatListenerService extends IntentService {
+public class ChatListenerService extends Service {
 
-    public ChatListenerService() {
-        super("Myservice");
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return super.onStartCommand(intent, flags, startId);
     }
 
     @Override
@@ -14,9 +17,10 @@ public class ChatListenerService extends IntentService {
         super.onDestroy();
     }
 
+    @Nullable
     @Override
-    protected void onHandleIntent(Intent intent) {
-
+    public IBinder onBind(Intent intent) {
+        return null;
     }
 
 

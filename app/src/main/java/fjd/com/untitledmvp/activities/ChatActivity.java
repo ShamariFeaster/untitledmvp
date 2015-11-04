@@ -17,6 +17,17 @@ public class ChatActivity extends AppCompatActivity {
         setContentView(R.layout.activity_chat);
     }
 
+    @Override
+    protected  void onStart(){
+        super.onStart();
+        //check if service started, stop it if it is
+    }
+
+    @Override
+    protected void onStop(){
+        super.onStop();
+        //check if service stopped, start it if it is
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
