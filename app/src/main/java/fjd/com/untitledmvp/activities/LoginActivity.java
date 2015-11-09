@@ -38,10 +38,13 @@ import android.util.Log;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 import fjd.com.untitledmvp.R;
+import fjd.com.untitledmvp.helper.FirebaseManager;
 import fjd.com.untitledmvp.models.User;
+import fjd.com.untitledmvp.service.ChatListenerService;
 import fjd.com.untitledmvp.state.GlobalState;
 import fjd.com.untitledmvp.util.Constants;
 
@@ -63,6 +66,7 @@ public class LoginActivity extends Activity  {
     private View mProgressView;
     private View mLoginFormView;
     private CallbackManager callbackManager;
+    private FirebaseManager mFBManager;
     private Firebase mFBRef;
     private AccessToken mFBKToken = null;
     private LoginButton mLoginButton;
@@ -74,6 +78,7 @@ public class LoginActivity extends Activity  {
         Firebase.setAndroidContext(this);
         FacebookSdk.sdkInitialize(getApplicationContext());
         mFBRef = new Firebase(Constants.FBURL);
+        mFBManager = new FirebaseManager(getApplicationContext());
         callbackManager = CallbackManager.Factory.create();
         setContentView(R.layout.activity_login);
 
@@ -392,8 +397,7 @@ public class LoginActivity extends Activity  {
 
                 state.CurrUser.uid = uid;
                 Intent intent = new Intent(getApplicationContext(), ProfileActivity.class);
-                //get my converations
-                //startService(new Intent(LoginActivity.this, Constants.SERVICE_CLASS_TKN));
+
                 startActivity(intent);
             }
 

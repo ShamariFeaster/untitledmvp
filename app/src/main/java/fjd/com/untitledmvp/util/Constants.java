@@ -19,4 +19,5 @@ public final class Constants {
     public static String CONVO_KEY = "convoId";
     public static String LOGOUT_KEY = "logout";
     public static Class<ChatListenerService> SERVICE_CLASS_TKN = ChatListenerService.class;
+    public  static String SERVICE_CONVO_IDS = "convoIDs";
 }

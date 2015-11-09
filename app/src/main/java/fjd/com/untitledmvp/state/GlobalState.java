@@ -8,8 +8,12 @@ import android.os.Bundle;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.LruCache;
 
+import java.util.ArrayList;
+
+import fjd.com.untitledmvp.helper.FirebaseManager;
 import fjd.com.untitledmvp.models.User;
 import fjd.com.untitledmvp.util.Constants;
+import fjd.com.untitledmvp.util.Util;
 
 /**
  * Created by wzhjtn on 10/21/2015.
@@ -18,7 +22,7 @@ public class GlobalState extends Application {
 
     public LruCache Cache;
     public User CurrUser = null;
-
+    private FirebaseManager mFBManager;
     public String getCurrUid(){
         return (CurrUser == null) ? Constants.MOCK_UID : CurrUser.uid;
     }
@@ -33,8 +37,8 @@ public class GlobalState extends Application {
         Cache = new LruCache(ctx);
         Picasso.setSingletonInstance(new Picasso.Builder(ctx).memoryCache(Cache).build());
         Picasso.with(ctx).setIndicatorsEnabled(true);
-
-        //registerActivityLifecycleCallbacks(new ALC());
+        mFBManager = new FirebaseManager(ctx);
+        registerActivityLifecycleCallbacks(new ALC());
         //check for polling timer, stop if started
     }
 
@@ -64,7 +68,12 @@ public class GlobalState extends Application {
 
         @Override
         public void onActivityPaused(Activity activity) {
+            final Context ctx = getApplicationContext();
+            final Intent svcIntent = Util.GetServiceIntent(ctx);
 
+            if("ChatActivity".equalsIgnoreCase(activity.getClass().getSimpleName())){
+                Util.StartService(ctx, svcIntent);
+            }
         }
 
         @Override
@@ -90,6 +99,14 @@ public class GlobalState extends Application {
         @Override
         public void onActivityStarted(Activity activity) {
 
+            final Context ctx = getApplicationContext();
+            final Intent svcIntent = Util.GetServiceIntent(ctx);
+
+            if(!"ChatActivity".equalsIgnoreCase(activity.getClass().getSimpleName())){
+                Util.StartService(ctx, svcIntent);
+            }else{
+               stopService(svcIntent);
+            }
         }
     }
 }

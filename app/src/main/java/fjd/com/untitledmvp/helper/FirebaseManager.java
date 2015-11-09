@@ -7,6 +7,11 @@ import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
 import com.firebase.client.ValueEventListener;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Set;
+
 import fjd.com.untitledmvp.models.User;
 import fjd.com.untitledmvp.util.Constants;
 
@@ -28,7 +33,7 @@ public class FirebaseManager {
         mFBRef.child(path).addListenerForSingleValueEvent(listener);
     }
     public void getUser(String uid, ValueEventListener listener){
-        _get("users/" + uid, listener );
+        _get("users/" + uid, listener);
     }
     public void getUn(String uid, ValueEventListener listener){
         _get("users/" + uid + "/un", listener);
@@ -40,5 +45,49 @@ public class FirebaseManager {
 
     public void getLastChatMessage(String convoId, ValueEventListener listener){
         mFBRef.child("messages/"+convoId).limitToLast(1).addListenerForSingleValueEvent(listener);
+    }
+
+    public String GetIndexString(DataSnapshot dss){
+        String ret = "";
+        if(dss != null){
+            HashMap hm = (HashMap)dss.getValue();
+            if (hm != null) {
+                Set set = hm.keySet();
+                if(!set.isEmpty()){
+                    ret = (String) set.toArray()[0];
+                }
+            }
+        }
+
+        return ret;
+    }
+
+    public void GetConversationKeys(String uid, final ListCallback callback){
+        getUser(uid, new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Iterable<DataSnapshot> snapShots = dataSnapshot.child("matches").getChildren();
+                Collection<DataSnapshot> convoIDs = new ArrayList<DataSnapshot>();
+                for(DataSnapshot ss: snapShots){
+                    convoIDs.add(ss);
+                }
+
+                ArrayList<String> listOfStrings = new ArrayList<>();
+                for(DataSnapshot convoSS: convoIDs){
+                    listOfStrings.add(convoSS.getKey());
+                }
+                callback.onListFetched(listOfStrings);
+
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+
+            }
+        });
+    }
+
+    public  interface ListCallback{
+        void onListFetched(ArrayList<String> list);
     }
 }

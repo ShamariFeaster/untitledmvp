@@ -10,8 +10,7 @@ import java.util.Map;
 public class Pair<L,R> {
     public L key = null;
     public R value = null;
-    public Map keys = new HashMap<String, L>();
-    public Map vals = new HashMap<String, R>();
+
 
     public Pair(){}
 
@@ -23,7 +22,5 @@ public class Pair<L,R> {
     public Pair(String keyAlias, L left, String valAlias, R right){
         this.key = left;
         this.value = right;
-        keys.put(keyAlias, left);
-        vals.put(valAlias, right);
     }
 }

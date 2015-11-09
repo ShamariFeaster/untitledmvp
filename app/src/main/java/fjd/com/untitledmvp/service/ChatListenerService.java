@@ -12,9 +12,12 @@ import com.firebase.client.FirebaseError;
 import com.firebase.client.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
+import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.helper.FirebaseManager;
 import fjd.com.untitledmvp.helper.Pair;
+import fjd.com.untitledmvp.models.ChatMessage;
 import fjd.com.untitledmvp.util.Constants;
 import fjd.com.untitledmvp.util.Util;
 
@@ -25,34 +28,39 @@ public class ChatListenerService extends Service {
     private FirebaseManager mFBManager;
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Firebase.setAndroidContext(this);
-        mFBRef = new Firebase(Constants.FBURL);
-        mFBManager = new FirebaseManager(this);
 
         if(mIsStarted == false){
+            Firebase.setAndroidContext(this);
+            mFBRef = new Firebase(Constants.FBURL);
+            mFBManager = new FirebaseManager(this);
+            mListeners = new ArrayList<>();
             //do work
-            ArrayList<String> convos = intent.getStringArrayListExtra("convoIds");
-            final Pair<Firebase, ChildEventListener> pair = new Pair<>();
+            ArrayList<String> convos = intent.getStringArrayListExtra(Constants.SERVICE_CONVO_IDS);
 
+            final Pair<Firebase, ChildEventListener> pair = new Pair<>();
             for (String convoId : convos) {
                 Pair<String,String> convoObj = Util.SplitConvoKey(convoId);
-                pair.key = mFBRef.child(convoObj.value);
 
-                mFBManager.getLastChatMessage(convoObj.key, new ValueEventListener() {
+                pair.key = mFBRef.child("messages/"+convoObj.value);
+
+                ValueEventListener veListener = new FrozenValueEventListener<Firebase, ChildEventListener> (pair) {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
-
-                        MyChildEventListener listener =  new MyChildEventListener(dataSnapshot.getKey()) {
+                        /*onChildAdded is called for once for every message*/
+                        //this SS key is last message
+                        OnlyNewMessagesListener newMsgListener =  new OnlyNewMessagesListener(dataSnapshot) {
 
                             @Override
                             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
                                 //fires on startup, get's entire
-                                if(_lastKey.equalsIgnoreCase(dataSnapshot.getKey())){
-                                    _lastMessageMatched = true;
+                                if(this._lastKey.equalsIgnoreCase(dataSnapshot.getKey())){
+                                    this._lastMessageMatched = true;
                                 }
 
-                                if(_lastMessageMatched == true){
-                                    _newMsgCntSinceStart++;
+                                //key() here is the parent key of the array (ie, convoID)
+                                if(this._lastMessageMatched == true && this._newMsgCntSinceStart++ > 0){
+                                    ChatMessage msg = dataSnapshot.getValue(ChatMessage.class);
+                                    Util.PostNotification(ChatListenerService.this, this._convoID, "New Message", msg.getText() , R.drawable.ic_stat_name );
                                 }
                             }
 
@@ -77,15 +85,17 @@ public class ChatListenerService extends Service {
                             }
                         };
 
-                        pair.value = pair.key.addChildEventListener(listener);
-                        mListeners.add(pair);
+                        this.__pair.value = this.__pair.key.addChildEventListener(newMsgListener);
+                        mListeners.add(this.__pair);
                     }
 
                     @Override
                     public void onCancelled(FirebaseError firebaseError) {
 
                     }
-                });
+                };
+
+                mFBManager.getLastChatMessage(convoObj.value, veListener);
 
 
 
@@ -113,32 +123,53 @@ public class ChatListenerService extends Service {
         return null;
     }
 
-    private class MyChildEventListener implements ChildEventListener{
+    private class OnlyNewMessagesListener implements ChildEventListener{
         protected String _lastKey = "";
         protected int _newMsgCntSinceStart = 0;
         protected Boolean _lastMessageMatched = false;
+        protected String _convoID = "";
 
-        public MyChildEventListener(String lastKey){
-            _lastKey = lastKey;
+        public OnlyNewMessagesListener(DataSnapshot dss){
+            _lastKey = (dss != null) ? mFBManager.GetIndexString(dss) : "";
+            _convoID = dss.getKey();
         }
 
-        @Override
         public void onChildAdded(DataSnapshot dataSnapshot, String s) {
 
         }
 
-        @Override
+
         public void onChildChanged(DataSnapshot dataSnapshot, String s) {
 
         }
 
-        @Override
+
         public void onChildRemoved(DataSnapshot dataSnapshot) {
 
         }
 
-        @Override
+
         public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+        }
+
+
+        public void onCancelled(FirebaseError firebaseError) {
+
+        }
+    }
+
+    private class FrozenValueEventListener<LeftT,RightT> implements ValueEventListener{
+
+        protected Pair<LeftT,RightT> __pair = new Pair<>();
+
+        public FrozenValueEventListener(Pair<LeftT,RightT> pair){
+            __pair.key = pair.key;
+            __pair.value = pair.value;
+        }
+
+        @Override
+        public void onDataChange(DataSnapshot dataSnapshot) {
 
         }
 
@@ -147,5 +178,4 @@ public class ChatListenerService extends Service {
 
         }
     }
-
 }
