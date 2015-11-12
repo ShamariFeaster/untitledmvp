@@ -23,10 +23,10 @@ import java.util.Map;
 import java.util.Queue;
 
 import fjd.com.untitledmvp.R;
+import fjd.com.untitledmvp.helper.FirebaseManager;
 import fjd.com.untitledmvp.helper.GeoQueryWrapper;
 import fjd.com.untitledmvp.helper.ImageManager;
 import fjd.com.untitledmvp.helper.Pair;
-import fjd.com.untitledmvp.models.ChatMessage;
 import fjd.com.untitledmvp.models.User;
 import fjd.com.untitledmvp.state.GlobalState;
 import fjd.com.untitledmvp.util.Constants;
@@ -55,6 +55,7 @@ public class MatchFragment extends Fragment {
     private Pair<User, Bitmap> mCurrentProspect;
     private View mProgressOverlay;
     private String TAG = "OUTPUT";
+    private FirebaseManager mFBMgr;
     public MatchFragment() {
         // Required empty public constructor
     }
@@ -73,15 +74,20 @@ public class MatchFragment extends Fragment {
         mMatches = mGeoWrapper.Query(0,0,0);
         Log.e(TAG, "SPAWNING");
         mImageManager.fetchCacheAsync();
-        for(final String prospectUid : mMatches){
+        for(String prospectUid : mMatches){
 
             mFBRef.child("users").child(prospectUid).addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
-                    User user = dataSnapshot.getValue(User.class);
-                    user.uid = prospectUid;
-                    Pair<User,String> pair = new Pair<>(user, (String) dataSnapshot.child("image").child("key").getValue());
-                    mSharedImageKeyQueue.offer(pair);
+                    if(dataSnapshot.exists()){//should also exclude current matches
+                        User user = dataSnapshot.getValue(User.class);
+                        if(!user.getUid().equalsIgnoreCase(mState.getCurrUid())){
+                            Pair<User,String> pair = new Pair<>(user, (String) dataSnapshot.child("image").child("key").getValue());
+                            mSharedImageKeyQueue.offer(pair);
+                        }
+
+                    }
+
                 }
 
                 @Override
@@ -115,14 +121,67 @@ public class MatchFragment extends Fragment {
                  * timeout w/ no new prospects.*/
                 if(mCurrentProspect != null){
                     final Map<String, Object> update = new HashMap<>();
-                    final String uid = mCurrentProspect.key.uid;
+                    final String uid = mCurrentProspect.key.getUid();
                     update.put(uid, 1);
                     mImageManager.makeAndSaveThumbnail(mCurrentProspect);
 
-                    //add prospect to my likes
-                    mFBRef.child("users")
-                            .child(mUid)
-                            .child("likes").updateChildren(update, new Firebase.CompletionListener() {
+                    final Firebase.CompletionListener matchUpdateCallback
+                            =  new Firebase.CompletionListener() {
+                        @Override
+                        public void onComplete(FirebaseError firebaseError, Firebase firebase) {
+                            Log.d(TAG, "Matched user " + uid);
+                            mFBMgr.getFn(uid, new ValueEventListener() {
+                                @Override
+                                public void onDataChange(DataSnapshot dataSnapshot) {
+                                    if (dataSnapshot.exists()) {
+                                        String matchFn = (String) dataSnapshot.getValue();
+                                        Util.ShowToast(getActivity(),"You matched with user " + matchFn);
+                                    }
+
+                                }
+
+                                @Override
+                                public void onCancelled(FirebaseError firebaseError) {
+
+                                }
+                            });
+
+
+
+                            //send ordered broadcast
+                        }
+
+                    };
+
+                    final ValueEventListener matchResultCallback = new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot dataSnapshot) {
+
+                            if (dataSnapshot.exists()) {
+                                update.clear();
+                                String chatID = mUid + "-" + uid;
+                                String myMatchCompositeKey = chatID + "|" + uid;
+                                String prospectMatchCompositeKey = chatID + "|" + mUid;
+                                update.put("users/" + mUid + "/matches/" + myMatchCompositeKey,
+                                        Constants.USE_KEY);
+                                update.put("users/" + uid + "/matches/" + prospectMatchCompositeKey,
+                                        Constants.USE_KEY);
+                                update.put("messages/" + chatID, Constants.USE_KEY);
+                                mFBRef.updateChildren(update, matchUpdateCallback);
+
+                            } else {
+                                Log.d(TAG, "Did not match user " + uid);
+
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(FirebaseError firebaseError) {
+
+                        }
+                    };
+
+                    Firebase.CompletionListener likeCheckCallback = new Firebase.CompletionListener() {
                         @Override
                         public void onComplete(FirebaseError firebaseError, Firebase firebase) {
                             //check prospects "like" array for me
@@ -130,38 +189,7 @@ public class MatchFragment extends Fragment {
                                     .child(uid)
                                     .child("likes")
                                     .child(mUid)
-                                    .addListenerForSingleValueEvent(new ValueEventListener() {
-                                        @Override
-                                        public void onDataChange(DataSnapshot dataSnapshot) {
-
-                                            if (dataSnapshot.exists()) {
-                                                update.clear();
-                                                String chatID = mUid + "-" + uid;
-                                                String myMatchCompositeKey = chatID + "|" + uid;
-                                                String prospectMatchCompositeKey = chatID + "|" + mUid;
-                                                update.put("users/" + mUid + "/matches/" + myMatchCompositeKey, Constants.USE_KEY);
-                                                update.put("users/" + uid + "/matches/" + prospectMatchCompositeKey, Constants.USE_KEY);
-                                                update.put("messages/" + chatID, Constants.USE_KEY);
-                                                mFBRef.updateChildren(update, new Firebase.CompletionListener() {
-                                                    @Override
-                                                    public void onComplete(FirebaseError firebaseError, Firebase firebase) {
-                                                        Log.d(TAG, "Matched user " + uid);
-                                                        Toast.makeText(getActivity(), "You matched with user " + uid, Toast.LENGTH_SHORT).show();
-                                                    }
-
-                                                });
-
-                                            } else {
-                                                Log.d(TAG, "Did not match user " + uid);
-
-                                            }
-                                        }
-
-                                        @Override
-                                        public void onCancelled(FirebaseError firebaseError) {
-
-                                        }
-                                    });
+                                    .addListenerForSingleValueEvent(matchResultCallback);
 
                             //if there, enter "myUid-prospectUid|prospectUid" into mine and
                             //"myUid-prospectUid|myUid" prospect's matches, with other UID always going last
@@ -169,7 +197,11 @@ public class MatchFragment extends Fragment {
                             //for convo listview we split on "|" use part[1] as display name
                             //part[0] is passed to chatActivity keys message queue to listen to
                         }
-                    });
+                    };
+
+                    //add prospect to my likes
+                    mFBRef.child("users").child(mUid)
+                            .child("likes").updateChildren(update, likeCheckCallback);
 
                     mCurrentProspect = mSharedBitmapQueue.poll();
                     setCurrProspect(mProspectImage, mCurrentProspect);
@@ -275,5 +307,6 @@ public class MatchFragment extends Fragment {
         mUid = mState.getCurrUid();
         mGeoWrapper = new GeoQueryWrapper(IS_MOCK);
         mFBRef = new Firebase(Constants.FBURL);
+        mFBMgr = new FirebaseManager(this.getActivity());
     }
 }

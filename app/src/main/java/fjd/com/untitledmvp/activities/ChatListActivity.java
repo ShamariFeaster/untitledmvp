@@ -9,7 +9,7 @@ import android.view.MenuItem;
 import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.util.Constants;
 
-public class ChatListActivity extends AppCompatActivity {
+public class ChatListActivity extends BaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

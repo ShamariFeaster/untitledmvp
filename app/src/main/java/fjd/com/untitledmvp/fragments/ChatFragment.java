@@ -21,9 +21,12 @@ import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
 import com.firebase.client.ValueEventListener;
 
+import java.util.HashMap;
+
 import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.helper.ChatListAdapter;
 import fjd.com.untitledmvp.models.ChatMessage;
+import fjd.com.untitledmvp.models.User;
 import fjd.com.untitledmvp.state.GlobalState;
 import fjd.com.untitledmvp.util.Constants;
 
@@ -43,7 +46,6 @@ public class ChatFragment extends Fragment {
     private Firebase mFBChatRef = null;
     private ChatListAdapter mChatListAdapter;
     private ValueEventListener mConnectedListener;
-    private String mUsername = "";
     private GlobalState mState;
 
     private static final String ARG_PARAM1 = "myUserName";
@@ -72,9 +74,9 @@ public class ChatFragment extends Fragment {
     private void sendMessage(View v) {
         EditText inputText = (EditText) v.findViewById(R.id.messageInput);
         String input = inputText.getText().toString();
-        if (!input.equals("")) {
+        if (!input.equals("") && mState != null && mFBChatRef != null && v != null) {
             // Create our 'model', a Chat object
-            ChatMessage chat = new ChatMessage(mUsername, input);
+            ChatMessage chat = new ChatMessage(mState.getCurrFn(), input);
             // Create a new, auto-generated child of that chat location, and save our chat data there
             mFBChatRef.push().setValue(chat);
             inputText.setText("");
@@ -82,6 +84,7 @@ public class ChatFragment extends Fragment {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if(mContext == null){
@@ -90,17 +93,24 @@ public class ChatFragment extends Fragment {
         Firebase.setAndroidContext(mContext);
         Intent intent = getActivity().getIntent();
         String convoID = intent.getStringExtra(Constants.CONVO_KEY);
+
         mFBChatRef = new Firebase(Constants.FBURL)
                 .child("messages")
                 .child(convoID);
         mState = (GlobalState) mContext;
-        mUsername = mState.getCurrFn();
+
+        HashMap<String,String> serializedUser = (HashMap) intent.getSerializableExtra(Constants.CURR_USER_KEY);
+        if(serializedUser != null){
+            mState.SetCurrUser(User.FromHashMap(serializedUser));
+        }
+
+
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        mChatListAdapter = new ChatListAdapter(mFBChatRef.limitToLast(50), this.getActivity(), R.layout.chat_message, mUsername);
+        mChatListAdapter = new ChatListAdapter(mFBChatRef.limitToLast(50), this.getActivity(), R.layout.chat_message, mState.getCurrFn());
         mChatListView.setAdapter(mChatListAdapter);
         mChatListAdapter.registerDataSetObserver(new DataSetObserver() {
             @Override

@@ -2,6 +2,7 @@ package fjd.com.untitledmvp.helper;
 
 import android.content.Context;
 
+import com.firebase.client.ChildEventListener;
 import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
 import com.firebase.client.FirebaseError;
@@ -12,7 +13,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 
-import fjd.com.untitledmvp.models.User;
+import fjd.com.untitledmvp.callback.ListCallback;
+import fjd.com.untitledmvp.listener.NewItemListener;
 import fjd.com.untitledmvp.util.Constants;
 
 /**
@@ -20,9 +22,13 @@ import fjd.com.untitledmvp.util.Constants;
  */
 public class FirebaseManager {
     private Firebase mFBRef;
+    private FirebaseManager mThis;
+    private HashMap<String,ChildEventListener> mItemListenersTable;
     public FirebaseManager(Context context){
         Firebase.setAndroidContext(context);
         mFBRef = new Firebase(Constants.FBURL);
+        mThis = this;
+        mItemListenersTable = new HashMap<>();
     }
 
     public Firebase fetchRef(String path){
@@ -32,6 +38,11 @@ public class FirebaseManager {
     private void _get(String path, ValueEventListener listener){
         mFBRef.child(path).addListenerForSingleValueEvent(listener);
     }
+
+    private void _getLastChild(String path, ValueEventListener listener){
+        mFBRef.child(path).limitToLast(1).addListenerForSingleValueEvent(listener);
+    }
+
     public void getUser(String uid, ValueEventListener listener){
         _get("users/" + uid, listener);
     }
@@ -44,7 +55,64 @@ public class FirebaseManager {
     }
 
     public void getLastChatMessage(String convoId, ValueEventListener listener){
-        mFBRef.child("messages/"+convoId).limitToLast(1).addListenerForSingleValueEvent(listener);
+        if(convoId != null && !convoId.isEmpty()){
+            mFBRef.child("messages/"+convoId).limitToLast(1).addListenerForSingleValueEvent(listener);
+        }
+
+    }
+
+    public void SetNewItemListener(final String path, final NewItemListener listener){
+
+        _getLastChild(path, new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot lastItemSnapshot) {
+                NewItemListener wrapperListener = new NewItemListener(lastItemSnapshot, mThis){
+                    @Override
+                    public void Init(DataSnapshot dss){
+                        listener.Init(dss);
+                    };
+                    @Override
+                    public Boolean IsLastItemReached(DataSnapshot currItemSnapshot){
+                        return listener.IsLastItemReached(currItemSnapshot);
+                    };
+                    @Override
+                    public void OnNewItem(DataSnapshot dataSnapshot, String s) {
+                        listener.OnNewItem(dataSnapshot,s);
+                    };
+                };
+                mItemListenersTable.put(path, listener);
+                new Firebase(path).addChildEventListener(wrapperListener);
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+
+            }
+        });
+
+    }
+
+    public void RemoveNewItemListener(String path){
+        if(mItemListenersTable.containsKey(path)){
+            new Firebase(path).removeEventListener(mItemListenersTable.get(path));
+        }
+    }
+
+    public ChildEventListener GetListener(String path){
+        ChildEventListener ret = null;
+        if(mItemListenersTable.containsKey(path)){
+            ret = mItemListenersTable.get(path);
+        }
+        return  ret;
+    }
+
+    public void getLastMatch(String uid, ValueEventListener listener){
+        if(uid != null && !uid.isEmpty()){
+            mFBRef.child("users")
+                    .child(uid)
+                    .child("matches").limitToLast(1).addListenerForSingleValueEvent(listener);
+        }
+
     }
 
     public String GetIndexString(DataSnapshot dss){
@@ -87,7 +155,5 @@ public class FirebaseManager {
         });
     }
 
-    public  interface ListCallback{
-        void onListFetched(ArrayList<String> list);
-    }
+
 }

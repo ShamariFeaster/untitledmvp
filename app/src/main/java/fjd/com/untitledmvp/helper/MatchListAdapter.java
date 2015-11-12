@@ -31,7 +31,7 @@ public class MatchListAdapter extends FirebaseListAdapter<String> {
     public MatchListAdapter(Firebase FBRef, Class<String> mModelClass, int mLayout, Activity activity) {
 
         super(FBRef.child("users")
-                .child(((GlobalState) activity.getApplicationContext()).CurrUser.uid)
+                .child(((GlobalState) activity.getApplicationContext()).getCurrUid())
                 .child("matches"), mModelClass, mLayout, activity);
         mImageManager = new ImageManager(activity.getApplicationContext());
         mFBManager = new FirebaseManager(activity.getApplicationContext());

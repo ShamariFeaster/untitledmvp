@@ -6,10 +6,12 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import com.fasterxml.jackson.databind.deser.Deserializers;
+
 import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.util.Constants;
 
-public class ChatActivity extends AppCompatActivity {
+public class ChatActivity extends BaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

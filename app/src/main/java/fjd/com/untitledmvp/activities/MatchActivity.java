@@ -9,7 +9,7 @@ import android.view.MenuItem;
 import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.util.Constants;
 
-public class MatchActivity extends AppCompatActivity {
+public class MatchActivity extends BaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

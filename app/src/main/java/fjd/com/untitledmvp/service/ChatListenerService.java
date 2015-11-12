@@ -1,7 +1,11 @@
 package fjd.com.untitledmvp.service;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 
@@ -17,65 +21,80 @@ import java.util.HashMap;
 import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.helper.FirebaseManager;
 import fjd.com.untitledmvp.helper.Pair;
+import fjd.com.untitledmvp.listener.ValueEventListenerClosure;
+import fjd.com.untitledmvp.listener.NewItemListener;
 import fjd.com.untitledmvp.models.ChatMessage;
+
+import fjd.com.untitledmvp.models.User;
+import fjd.com.untitledmvp.receiver.ServiceReceiver;
 import fjd.com.untitledmvp.util.Constants;
 import fjd.com.untitledmvp.util.Util;
 
 public class ChatListenerService extends Service {
-    private Boolean mIsStarted = false;
-    private Firebase mFBRef = null;
-    private ArrayList<Pair<Firebase, ChildEventListener>> mListeners;
-    private FirebaseManager mFBManager;
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
 
-        if(mIsStarted == false){
+    private Boolean mIsStarted = false;
+    private ArrayList<Pair<Firebase, ChildEventListener>> mListeners;
+    private Context mCtx;
+    private ServiceReceiver mServiceReceiver;
+    public int mNotificationId = 0;
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        mCtx = this;
+
+        if(!mIsStarted){
             Firebase.setAndroidContext(this);
-            mFBRef = new Firebase(Constants.FBURL);
-            mFBManager = new FirebaseManager(this);
+            Firebase fbRef = new Firebase(Constants.FBURL);
+            final FirebaseManager fbManager = new FirebaseManager(this);
             mListeners = new ArrayList<>();
+            mServiceReceiver = new ServiceReceiver();
+            mCtx.registerReceiver(mServiceReceiver, new IntentFilter(Constants.BROADCAST_ACTION));
             //do work
             ArrayList<String> convos = intent.getStringArrayListExtra(Constants.SERVICE_CONVO_IDS);
 
-            final Pair<Firebase, ChildEventListener> pair = new Pair<>();
-            for (String convoId : convos) {
-                Pair<String,String> convoObj = Util.SplitConvoKey(convoId);
+            final HashMap<String,String> serializedCurrUserObj
+                    = (HashMap)intent.getSerializableExtra(Constants.CURR_USER_KEY);
 
-                pair.key = mFBRef.child("messages/"+convoObj.value);
+            final Pair<Firebase, ChildEventListener> referenceToListenerPair = new Pair<>();
+            for (String compoundConvoInfo : convos) {
 
-                ValueEventListener veListener = new FrozenValueEventListener<Firebase, ChildEventListener> (pair) {
+                Pair<String,String> ConvoParticipantUidToconvoIdPair
+                        = Util.SplitConvoKey(compoundConvoInfo);
+
+                referenceToListenerPair.key
+                        = fbRef.child("messages/" + ConvoParticipantUidToconvoIdPair.value);
+
+                ValueEventListenerClosure newMessagesListener
+                        = generateListenerClosureThatBindsAndCaches(
+                        referenceToListenerPair, serializedCurrUserObj, mListeners, fbManager
+                );
+
+                fbManager.getLastChatMessage(
+                        ConvoParticipantUidToconvoIdPair.value, newMessagesListener);
+
+            }
+
+            final Pair<Firebase, ChildEventListener> referenceToMatchListenerPair = new Pair<>();
+
+            if(serializedCurrUserObj.containsKey("uid")){
+                String uid = serializedCurrUserObj.get("uid");
+                String path = "users/"+uid+"/matches";
+                referenceToMatchListenerPair.key = fbRef.child(path);
+
+                fbManager.SetNewItemListener(path, new NewItemListener() {
                     @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        /*onChildAdded is called for once for every message*/
-                        //this SS key is last message
-                        OnlyNewMessagesListener newMsgListener =  new OnlyNewMessagesListener(dataSnapshot) {
-
+                    public void OnNewItem(DataSnapshot dataSnapshot, String s) {
+                        fbManager.getFn((String) dataSnapshot.getValue(), new ValueEventListener() {
                             @Override
-                            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                                //fires on startup, get's entire
-                                if(this._lastKey.equalsIgnoreCase(dataSnapshot.getKey())){
-                                    this._lastMessageMatched = true;
+                            public void onDataChange(DataSnapshot dataSnapshot) {
+                                if (dataSnapshot.exists()) {
+                                    String fn = (String)dataSnapshot.getValue();
+                                    Bundle extras = new Bundle();
+                                    extras.putString(Constants.BC_NEW_MATCH_EXTRAS_MATCH_FN, fn);
+                                    extras.putInt(Constants.BC_NEW_MATCH_EXTRAS_ICON, R.drawable.ic_stat_name);
+                                    Util.BroadcastEvent(mCtx, mServiceReceiver, Constants.BROADCAST_NEW_MATCH, extras);
                                 }
-
-                                //key() here is the parent key of the array (ie, convoID)
-                                if(this._lastMessageMatched == true && this._newMsgCntSinceStart++ > 0){
-                                    ChatMessage msg = dataSnapshot.getValue(ChatMessage.class);
-                                    Util.PostNotification(ChatListenerService.this, this._convoID, "New Message", msg.getText() , R.drawable.ic_stat_name );
-                                }
-                            }
-
-                            @Override
-                            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-
-                            }
-
-                            @Override
-                            public void onChildRemoved(DataSnapshot dataSnapshot) {
-
-                            }
-
-                            @Override
-                            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
 
                             }
 
@@ -83,28 +102,20 @@ public class ChatListenerService extends Service {
                             public void onCancelled(FirebaseError firebaseError) {
 
                             }
-                        };
-
-                        this.__pair.value = this.__pair.key.addChildEventListener(newMsgListener);
-                        mListeners.add(this.__pair);
-                    }
-
-                    @Override
-                    public void onCancelled(FirebaseError firebaseError) {
+                        });
 
                     }
-                };
+                });
 
-                mFBManager.getLastChatMessage(convoObj.value, veListener);
-
+                referenceToMatchListenerPair.value = fbManager.GetListener(path);
+                mListeners.add(referenceToMatchListenerPair);
 
 
             }
 
             mIsStarted = true;
-        }else{
-
         }
+
         return START_REDELIVER_INTENT;
     }
 
@@ -112,9 +123,8 @@ public class ChatListenerService extends Service {
     public void onDestroy() {
         super.onDestroy();
         mIsStarted = false;
-        for(Pair<Firebase, ChildEventListener> pair: mListeners){
-            pair.key.removeEventListener(pair.value);
-        }
+        cleanupExistingListeners(mListeners);
+        mCtx.unregisterReceiver(mServiceReceiver);
     }
 
     @Nullable
@@ -123,59 +133,82 @@ public class ChatListenerService extends Service {
         return null;
     }
 
-    private class OnlyNewMessagesListener implements ChildEventListener{
-        protected String _lastKey = "";
-        protected int _newMsgCntSinceStart = 0;
-        protected Boolean _lastMessageMatched = false;
-        protected String _convoID = "";
-
-        public OnlyNewMessagesListener(DataSnapshot dss){
-            _lastKey = (dss != null) ? mFBManager.GetIndexString(dss) : "";
-            _convoID = dss.getKey();
+    private void cleanupExistingListeners(ArrayList<Pair<Firebase, ChildEventListener>> listeners){
+        for(Pair<Firebase, ChildEventListener> refToListenerPair: mListeners){
+            refToListenerPair.key.removeEventListener(refToListenerPair.value);
         }
-
-        public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-
-        }
-
-
-        public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-
-        }
-
-
-        public void onChildRemoved(DataSnapshot dataSnapshot) {
-
-        }
-
-
-        public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-
-        }
-
-
-        public void onCancelled(FirebaseError firebaseError) {
-
-        }
+        listeners.clear();
     }
 
-    private class FrozenValueEventListener<LeftT,RightT> implements ValueEventListener{
+    @SuppressWarnings("unchecked")
+    private NewItemListener generateOnlyNewMessageListener(
+            DataSnapshot lastSnapshotAsOfNow,
+            final HashMap<String,String> serializedCurrUserObj,
+            FirebaseManager fbManager){
 
-        protected Pair<LeftT,RightT> __pair = new Pair<>();
+        return new NewItemListener(lastSnapshotAsOfNow, fbManager) {
 
-        public FrozenValueEventListener(Pair<LeftT,RightT> pair){
-            __pair.key = pair.key;
-            __pair.value = pair.value;
-        }
+            @Override
+            public void Init(DataSnapshot dss){
+                if(dss != null){
+                    this._lastItemKey = this._fbMgr.GetIndexString(dss);
+                    this.GetBundle().putString("convoId", dss.getKey());
+                }
+            }
 
-        @Override
-        public void onDataChange(DataSnapshot dataSnapshot) {
+            @Override
+            public Boolean IsLastItemReached(DataSnapshot currItemSnapshot){
+                return (this._lastItemKey.equalsIgnoreCase(currItemSnapshot.getKey()));
+            }
 
-        }
+            @Override
+            public void OnNewItem(DataSnapshot dataSnapshot, String s) {
+                final ChatMessage msg = dataSnapshot.getValue(ChatMessage.class);
 
-        @Override
-        public void onCancelled(FirebaseError firebaseError) {
+                Bundle extras = new Bundle();
+                extras.putString(Constants.BC_NEW_MSG_EXTRAS_CONVO_ID,
+                        (String) this.GetBundle().get("convoID"));
+                extras.putString(Constants.BC_NEW_MSG_EXTRAS_TEXT, msg.getText());
+                extras.putSerializable(Constants.BC_NEW_MSG_EXTRAS_USER, serializedCurrUserObj);
+                extras.putString(Constants.BC_NEW_MSG_EXTRAS_SENDER, msg.getSender());
+                extras.putInt(Constants.BC_NEW_MSG_EXTRAS_ICON, R.drawable.ic_stat_name);
+                Util.BroadcastEvent(mCtx, mServiceReceiver,Constants.BROADCAST_NEW_MESSAGE,extras);
+            }
 
-        }
+        };
+
     }
+
+    private ValueEventListenerClosure generateListenerClosureThatBindsAndCaches(
+            final Pair<Firebase, ChildEventListener> referenceListenerPair,
+            final HashMap<String, String> serializedCurrUserObj,
+            final ArrayList<Pair<Firebase, ChildEventListener>> referenceToListenerPairCache,
+            final FirebaseManager fbManager){
+
+        return new ValueEventListenerClosure<Firebase, ChildEventListener>
+                (referenceListenerPair, serializedCurrUserObj) {
+
+            final HashMap<String,String> serializedUserObj = this.__serializedCurrUserObj;
+
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+
+                //pair.key is reference, pair.value is listener
+                NewItemListener newMsgListener
+                        = generateOnlyNewMessageListener(dataSnapshot, serializedUserObj, fbManager);
+
+                if(!(this.__pair.value == null) && !(this.__pair.key == null)){
+                    this.__pair.value = this.__pair.key.addChildEventListener(newMsgListener);
+                    referenceToListenerPairCache.add(this.__pair);
+                }
+
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {}
+        };
+
+    }
+
+
 }

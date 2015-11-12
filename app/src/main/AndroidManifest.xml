@@ -78,13 +78,17 @@
             android:name=".service.ChatListenerService"
             android:enabled="true"
             android:exported="false" >
+
         </service>
 
         <activity
             android:name=".activities.BaseActivity"
             android:label="@string/title_activity_base"
             android:theme="@style/AppTheme.NoActionBar" >
+
+
         </activity>
+
     </application>
 
 </manifest>

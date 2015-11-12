@@ -377,9 +377,9 @@ public class LoginActivity extends Activity  {
         Firebase ref = new Firebase(Constants.FBURL+"/users/"+ uid);
         //surround with try/catch
         GlobalState state = (GlobalState) getApplicationContext();
-        state.CurrUser = new User(email, "","",email);;
-        state.CurrUser.uid = uid;
-        ref.setValue(state.CurrUser);
+        state.SetCurrUser(new User(email, "","",email));
+        state.SetCurrUid(uid);
+        ref.setValue(state.GetCurrUser());
     }
 
     public void initProfileInDb(final String uid, final String email, final String fn, final String ln){
@@ -389,13 +389,14 @@ public class LoginActivity extends Activity  {
             public void onDataChange(DataSnapshot dataSnapshot) {
                 GlobalState state = (GlobalState) getApplicationContext();
                 if (!dataSnapshot.exists()) {
-                    state.CurrUser = new User(email, fn, ln, email);
-                    ref.setValue(state.CurrUser);
+                    state.SetCurrUser(new User(email, fn, ln, email));
+                    state.SetCurrUid(uid);
+                    ref.setValue(state.GetCurrUser());
                 }else{
-                    state.CurrUser = (User) dataSnapshot.getValue(User.class);
+                    state.SetCurrUser((User) dataSnapshot.getValue(User.class));
                 }
 
-                state.CurrUser.uid = uid;
+
                 Intent intent = new Intent(getApplicationContext(), ProfileActivity.class);
 
                 startActivity(intent);

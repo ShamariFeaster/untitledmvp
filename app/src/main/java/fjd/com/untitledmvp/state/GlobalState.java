@@ -23,22 +23,50 @@ public class GlobalState extends Application {
     public LruCache Cache;
     public User CurrUser = null;
     private FirebaseManager mFBManager;
+    private Boolean mIsVisible = false;
+    private static Context mCtx;
     public String getCurrUid(){
-        return (CurrUser == null) ? Constants.MOCK_UID : CurrUser.uid;
+        return (CurrUser == null) ? Constants.MOCK_UID : CurrUser.getUid();
+    }
+
+    public void SetCurrUid(String uid){
+        if(CurrUser != null){
+            CurrUser.setUid(uid);
+        }
     }
 
     public String getCurrFn(){
         return (CurrUser == null) ? Constants.MOCK_FN : CurrUser.getFn();
     }
+
+    public User GetCurrUser(){ return (CurrUser == null) ? new User() : CurrUser;}
+
+    public void SetCurrUser(User user){
+        if(user != null){
+            CurrUser = user;
+        } else{
+            CurrUser = new User();
+        }
+    }
+    public static Context GetContext(){
+        return mCtx;
+    }
+    public Boolean IsVisible(){
+        return mIsVisible;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
-        Context ctx = getApplicationContext();
-        Cache = new LruCache(ctx);
-        Picasso.setSingletonInstance(new Picasso.Builder(ctx).memoryCache(Cache).build());
-        Picasso.with(ctx).setIndicatorsEnabled(true);
-        mFBManager = new FirebaseManager(ctx);
-        registerActivityLifecycleCallbacks(new ALC());
+        mCtx = getApplicationContext();
+        Cache = new LruCache(mCtx);
+        Picasso.setSingletonInstance(new Picasso.Builder(mCtx).memoryCache(Cache).build());
+        Picasso.with(mCtx).setIndicatorsEnabled(true);
+        mFBManager = new FirebaseManager(mCtx);
+        //registerActivityLifecycleCallbacks(new ALC());
+        final Context ctx = getApplicationContext();
+        Util.StartService(ctx, Util.GetServiceIntent(ctx));
+
         //check for polling timer, stop if started
     }
 
@@ -63,17 +91,12 @@ public class GlobalState extends Application {
 
         @Override
         public void onActivityResumed(Activity activity) {
-
+            mIsVisible = true;
         }
 
         @Override
         public void onActivityPaused(Activity activity) {
-            final Context ctx = getApplicationContext();
-            final Intent svcIntent = Util.GetServiceIntent(ctx);
 
-            if("ChatActivity".equalsIgnoreCase(activity.getClass().getSimpleName())){
-                Util.StartService(ctx, svcIntent);
-            }
         }
 
         @Override
@@ -99,14 +122,6 @@ public class GlobalState extends Application {
         @Override
         public void onActivityStarted(Activity activity) {
 
-            final Context ctx = getApplicationContext();
-            final Intent svcIntent = Util.GetServiceIntent(ctx);
-
-            if(!"ChatActivity".equalsIgnoreCase(activity.getClass().getSimpleName())){
-                Util.StartService(ctx, svcIntent);
-            }else{
-               stopService(svcIntent);
-            }
         }
     }
 }

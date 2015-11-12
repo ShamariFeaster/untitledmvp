@@ -315,7 +315,7 @@ public class ProfileFragment extends Fragment {
             public void onDataChange(DataSnapshot snapshot) {
                 // do some stuff once
                 final String currentImageKey = (String) snapshot.getValue();
-                if (!currentImageKey.equalsIgnoreCase(Constants.NO_IMAGE_YET)) {
+                if (currentImageKey!= null && !currentImageKey.equalsIgnoreCase(Constants.NO_IMAGE_YET)) {
                     //I should be checking for the file locally before fetching from Amazon
                     Bitmap profileBitmap = mState.Cache.get(currentImageKey);
                     if(profileBitmap != null){

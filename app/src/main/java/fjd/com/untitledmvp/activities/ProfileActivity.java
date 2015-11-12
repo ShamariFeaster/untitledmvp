@@ -9,7 +9,7 @@ import android.view.MenuItem;
 import fjd.com.untitledmvp.R;
 import fjd.com.untitledmvp.util.Constants;
 
-public class ProfileActivity extends AppCompatActivity {
+public class ProfileActivity extends BaseActivity {
 
 
     @Override
