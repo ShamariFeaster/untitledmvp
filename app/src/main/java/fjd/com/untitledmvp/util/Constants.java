@@ -34,8 +34,8 @@ public final class Constants {
             .getText(R.string.broadcast_activity_name).toString();
     final public static String BROADCAST_NEW_MATCH = "com.fjd.newMatch";
     final public static String BROADCAST_NEW_MESSAGE = "com.fjd.newMessage";
-    final public static int BROADCAST_TYPE_NEW_MATCH = 1;
-    final public static int BROADCAST_TYPE_NEW_MESSAGE = 0;
+    final public static int BROADCAST_CODE_NEW_MATCH = 1;
+    final public static int BROADCAST_CODE_NEW_MESSAGE = 0;
     final public static int BROADCAST_HANDLED = 1;
     final public static int BROADCAST_UNHANDLED = 0;
     final public static String BC_NEW_MSG_EXTRAS_CONVO_ID = "broadcast.msg.convoId";

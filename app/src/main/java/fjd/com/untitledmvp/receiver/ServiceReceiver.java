@@ -20,23 +20,23 @@ public class ServiceReceiver extends BroadcastReceiver{
     public void onReceive(Context context, Intent intent) {
 
         int resultCode = this.getResultCode();
-        Bundle extras = intent.getExtras();
+        Bundle extras = getResultExtras(true);
         /*Broadcasts received here means app is not visible and should signal user with notification*/
         switch(resultCode){
 
             case Constants.BROADCAST_UNHANDLED:
 
-                switch(Util.GetBroadCastType(getResultData())) {
+                switch(Util.GetBroadCastTypeCode(getResultData())) {
 
-                    case Constants.BROADCAST_TYPE_NEW_MATCH:
+                    case Constants.BROADCAST_CODE_NEW_MATCH:
                         Util.PostNotification(
                                 context,
                                 "You matched with " + extras.getString(Constants.BC_NEW_MATCH_EXTRAS_MATCH_FN),
-                                extras.getInt(Constants.BC_NEW_MSG_EXTRAS_ICON)
+                                extras.getInt(Constants.BC_NEW_MATCH_EXTRAS_ICON)
                         );
                         break;
 
-                    case Constants.BROADCAST_TYPE_NEW_MESSAGE:
+                    case Constants.BROADCAST_CODE_NEW_MESSAGE:
                         Util.PostNotification(
                                 context,
                                 extras.getString(Constants.BC_NEW_MSG_EXTRAS_CONVO_ID),

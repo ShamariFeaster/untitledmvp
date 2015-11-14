@@ -1,7 +1,6 @@
 package fjd.com.untitledmvp.service;
 
 import android.app.Service;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -25,7 +24,6 @@ import fjd.com.untitledmvp.listener.ValueEventListenerClosure;
 import fjd.com.untitledmvp.listener.NewItemListener;
 import fjd.com.untitledmvp.models.ChatMessage;
 
-import fjd.com.untitledmvp.models.User;
 import fjd.com.untitledmvp.receiver.ServiceReceiver;
 import fjd.com.untitledmvp.util.Constants;
 import fjd.com.untitledmvp.util.Util;
@@ -83,9 +81,22 @@ public class ChatListenerService extends Service {
                 referenceToMatchListenerPair.key = fbRef.child(path);
 
                 fbManager.SetNewItemListener(path, new NewItemListener() {
+
                     @Override
-                    public void OnNewItem(DataSnapshot dataSnapshot, String s) {
-                        fbManager.getFn((String) dataSnapshot.getValue(), new ValueEventListener() {
+                    public void Init(DataSnapshot dss){
+                        SetItem(GetFirebaseManager().GetHashTableItem(dss));
+                    }
+
+                    @Override
+                    public String TransformSnapshotValue(DataSnapshot dss){
+                        return dss.getKey();
+                    }
+
+                    @Override
+                    public void OnNewItem(DataSnapshot dataSnapshot, String s, int newItemCnt) {
+                        Pair<String, String> matcheeUidToConvoIdPair
+                                = Util.SplitConvoKey(dataSnapshot.getKey());
+                        fbManager.getFn( matcheeUidToConvoIdPair.key , new ValueEventListener() {
                             @Override
                             public void onDataChange(DataSnapshot dataSnapshot) {
                                 if (dataSnapshot.exists()) {
@@ -93,7 +104,7 @@ public class ChatListenerService extends Service {
                                     Bundle extras = new Bundle();
                                     extras.putString(Constants.BC_NEW_MATCH_EXTRAS_MATCH_FN, fn);
                                     extras.putInt(Constants.BC_NEW_MATCH_EXTRAS_ICON, R.drawable.ic_stat_name);
-                                    Util.BroadcastEvent(mCtx, mServiceReceiver, Constants.BROADCAST_NEW_MATCH, extras);
+                                    Util.BroadcastEvent(mCtx, Constants.BROADCAST_NEW_MATCH, extras);
                                 }
 
                             }
@@ -107,7 +118,7 @@ public class ChatListenerService extends Service {
                     }
                 });
 
-                referenceToMatchListenerPair.value = fbManager.GetListener(path);
+                referenceToMatchListenerPair.value = fbManager.GetNewItemListener(path);
                 mListeners.add(referenceToMatchListenerPair);
 
 
@@ -151,23 +162,23 @@ public class ChatListenerService extends Service {
             @Override
             public void Init(DataSnapshot dss){
                 if(dss != null){
-                    this._lastItemKey = this._fbMgr.GetIndexString(dss);
-                    this.GetBundle().putString("convoId", dss.getKey());
+                    SetItem(GetFirebaseManager().GetHashTableItem(dss));
+                    GetBundle().putString("convoId", dss.getKey());
                 }
             }
 
             @Override
             public Boolean IsLastItemReached(DataSnapshot currItemSnapshot){
-                return (this._lastItemKey.equalsIgnoreCase(currItemSnapshot.getKey()));
+                return (GetItem().equalsIgnoreCase(currItemSnapshot.getKey()));
             }
 
             @Override
-            public void OnNewItem(DataSnapshot dataSnapshot, String s) {
+            public void OnNewItem(DataSnapshot dataSnapshot, String s, int newItemCnt) {
                 final ChatMessage msg = dataSnapshot.getValue(ChatMessage.class);
 
                 Bundle extras = new Bundle();
                 extras.putString(Constants.BC_NEW_MSG_EXTRAS_CONVO_ID,
-                        (String) this.GetBundle().get("convoID"));
+                        (String) GetBundle().get("convoID"));
                 extras.putString(Constants.BC_NEW_MSG_EXTRAS_TEXT, msg.getText());
                 extras.putSerializable(Constants.BC_NEW_MSG_EXTRAS_USER, serializedCurrUserObj);
                 extras.putString(Constants.BC_NEW_MSG_EXTRAS_SENDER, msg.getSender());

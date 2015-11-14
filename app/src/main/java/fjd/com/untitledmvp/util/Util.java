@@ -15,13 +15,13 @@ import android.view.View;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 
 import fjd.com.untitledmvp.activities.ChatActivity;
 import fjd.com.untitledmvp.callback.ListCallback;
 import fjd.com.untitledmvp.helper.FirebaseManager;
 import fjd.com.untitledmvp.helper.Pair;
+import fjd.com.untitledmvp.receiver.EmptyReceiver;
 import fjd.com.untitledmvp.service.ChatListenerService;
 import fjd.com.untitledmvp.state.GlobalState;
 
@@ -43,13 +43,13 @@ public class Util {
         return pair;
     }
 
-    public static int GetBroadCastType(String type){
+    public static int GetBroadCastTypeCode(String type){
         int typeInt = -1;
         if(type == null) return typeInt;
         if(type.equalsIgnoreCase(Constants.BROADCAST_NEW_MATCH)){
-            typeInt = Constants.BROADCAST_TYPE_NEW_MATCH;
+            typeInt = Constants.BROADCAST_CODE_NEW_MATCH;
         }else if(type.equalsIgnoreCase(Constants.BROADCAST_NEW_MESSAGE)){
-            typeInt = Constants.BROADCAST_TYPE_NEW_MESSAGE;
+            typeInt = Constants.BROADCAST_CODE_NEW_MESSAGE;
         }
         return typeInt;
     }
@@ -66,6 +66,20 @@ public class Util {
         );
 
     }
+
+    public static void BroadcastEvent(Context ctx,  String eventType, Bundle extras){
+        ctx.sendOrderedBroadcast(
+                Util.GetBroadcastIntent(),
+                null,
+                new EmptyReceiver(),
+                null,
+                Constants.BROADCAST_UNHANDLED,
+                eventType,
+                extras
+        );
+
+    }
+
     public static void ShowToast(Context ctx, String msg){
         Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show();
     }

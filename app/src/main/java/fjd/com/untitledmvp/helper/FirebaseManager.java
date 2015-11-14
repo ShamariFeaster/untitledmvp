@@ -69,19 +69,21 @@ public class FirebaseManager {
                 NewItemListener wrapperListener = new NewItemListener(lastItemSnapshot, mThis){
                     @Override
                     public void Init(DataSnapshot dss){
+                        listener.SetFirebaseManager(mThis);
                         listener.Init(dss);
+                        SetItem(listener.GetItem());
                     };
                     @Override
                     public Boolean IsLastItemReached(DataSnapshot currItemSnapshot){
                         return listener.IsLastItemReached(currItemSnapshot);
                     };
                     @Override
-                    public void OnNewItem(DataSnapshot dataSnapshot, String s) {
-                        listener.OnNewItem(dataSnapshot,s);
+                    public void OnNewItem(DataSnapshot dataSnapshot, String s, int newItemCount) {
+                        listener.OnNewItem(dataSnapshot,s,newItemCount);
                     };
                 };
                 mItemListenersTable.put(path, listener);
-                new Firebase(path).addChildEventListener(wrapperListener);
+                new Firebase(Constants.FBURL+"/"+path).addChildEventListener(wrapperListener);
             }
 
             @Override
@@ -98,7 +100,7 @@ public class FirebaseManager {
         }
     }
 
-    public ChildEventListener GetListener(String path){
+    public ChildEventListener GetNewItemListener(String path){
         ChildEventListener ret = null;
         if(mItemListenersTable.containsKey(path)){
             ret = mItemListenersTable.get(path);
@@ -115,7 +117,7 @@ public class FirebaseManager {
 
     }
 
-    public String GetIndexString(DataSnapshot dss){
+    public String GetHashTableItem(DataSnapshot dss){
         String ret = "";
         if(dss != null){
             HashMap hm = (HashMap)dss.getValue();

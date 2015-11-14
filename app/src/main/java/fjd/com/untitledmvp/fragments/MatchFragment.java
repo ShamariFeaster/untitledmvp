@@ -1,6 +1,9 @@
 package fjd.com.untitledmvp.fragments;
 
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.*;
 import android.app.Fragment;
@@ -28,6 +31,7 @@ import fjd.com.untitledmvp.helper.GeoQueryWrapper;
 import fjd.com.untitledmvp.helper.ImageManager;
 import fjd.com.untitledmvp.helper.Pair;
 import fjd.com.untitledmvp.models.User;
+import fjd.com.untitledmvp.receiver.EmptyReceiver;
 import fjd.com.untitledmvp.state.GlobalState;
 import fjd.com.untitledmvp.util.Constants;
 import fjd.com.untitledmvp.util.Util;
@@ -135,7 +139,13 @@ public class MatchFragment extends Fragment {
                                 public void onDataChange(DataSnapshot dataSnapshot) {
                                     if (dataSnapshot.exists()) {
                                         String matchFn = (String) dataSnapshot.getValue();
-                                        Util.ShowToast(getActivity(),"You matched with user " + matchFn);
+                                        Bundle extras = new Bundle();
+                                        extras.putString(Constants.BC_NEW_MATCH_EXTRAS_MATCH_FN, matchFn);
+                                        Util.BroadcastEvent(
+                                                MatchFragment.this.getActivity(),
+                                                Constants.BROADCAST_NEW_MATCH,
+                                                extras
+                                        );
                                     }
 
                                 }
