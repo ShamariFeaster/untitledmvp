@@ -4,6 +4,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 
@@ -47,6 +48,7 @@ import fjd.com.untitledmvp.models.User;
 import fjd.com.untitledmvp.service.ChatListenerService;
 import fjd.com.untitledmvp.state.GlobalState;
 import fjd.com.untitledmvp.util.Constants;
+import fjd.com.untitledmvp.util.Util;
 
 /**
  * A login screen that offers login via email/password.
@@ -373,6 +375,7 @@ public class LoginActivity extends Activity  {
         }
     }
 
+    /*this is not in use as currently Facebook auth is the only path*/
     public void initProfileInDb(String uid, String email){
         Firebase ref = new Firebase(Constants.FBURL+"/users/"+ uid);
         //surround with try/catch
@@ -396,9 +399,9 @@ public class LoginActivity extends Activity  {
                     state.SetCurrUser((User) dataSnapshot.getValue(User.class));
                 }
 
-
-                Intent intent = new Intent(getApplicationContext(), ProfileActivity.class);
-
+                final Context ctx = getApplicationContext();
+                Intent intent = new Intent(ctx, ProfileActivity.class);
+                Util.StartService(ctx, Util.GetServiceIntent(ctx));
                 startActivity(intent);
             }
 

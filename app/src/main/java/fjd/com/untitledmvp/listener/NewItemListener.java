@@ -35,12 +35,13 @@ public class NewItemListener implements ChildEventListener {
         this._lastItemKey = item;
     }
 
-    public Bundle GetBundle(){
-        return properties;
+    public void PutString(String key, String value){
+
+        this.properties.putString(key, value);
     }
 
-    public void SetBundle(Bundle properties){
-        this.properties = properties;
+    public String GetString(String key){
+        return this.properties.getString(key);
     }
 
     //constructors

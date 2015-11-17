@@ -71,6 +71,8 @@ public class FirebaseManager {
                     public void Init(DataSnapshot dss){
                         listener.SetFirebaseManager(mThis);
                         listener.Init(dss);
+                        /*this parameterized listener is the one that has its members checked
+                        * in OnChildAdded, so we need to pass `listener`'s last item through*/
                         SetItem(listener.GetItem());
                     };
                     @Override

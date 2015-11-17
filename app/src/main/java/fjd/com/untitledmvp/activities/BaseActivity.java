@@ -14,6 +14,7 @@ import fjd.com.untitledmvp.util.Util;
 
 public class BaseActivity extends AppCompatActivity {
     private Boolean mIsVisible = false;
+    private ActivityReceiver mActivityReceiver;
     public Boolean GetVisibility(){return mIsVisible;}
 
     @Override
@@ -23,7 +24,8 @@ public class BaseActivity extends AppCompatActivity {
         IntentFilter filter = new IntentFilter(Constants.BROADCAST_ACTION);
         filter.setPriority(1);
         /*Broadcasts received here means app is visible and should signal user with toast*/
-        registerReceiver(new ActivityReceiver(), filter);
+        mActivityReceiver = new ActivityReceiver();
+        registerReceiver(mActivityReceiver, filter);
 
     }
 
@@ -51,5 +53,6 @@ public class BaseActivity extends AppCompatActivity {
     @Override
     protected void onDestroy(){
         super.onDestroy();
+        unregisterReceiver(mActivityReceiver);
     }
 }

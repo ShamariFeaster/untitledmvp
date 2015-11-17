@@ -73,12 +73,12 @@ public class ChatListenerService extends Service {
 
             }
 
-            final Pair<Firebase, ChildEventListener> referenceToMatchListenerPair = new Pair<>();
+
 
             if(serializedCurrUserObj.containsKey("uid")){
                 String uid = serializedCurrUserObj.get("uid");
                 String path = "users/"+uid+"/matches";
-                referenceToMatchListenerPair.key = fbRef.child(path);
+                final Firebase ref = fbRef.child(path);
 
                 fbManager.SetNewItemListener(path, new NewItemListener() {
 
@@ -118,8 +118,7 @@ public class ChatListenerService extends Service {
                     }
                 });
 
-                referenceToMatchListenerPair.value = fbManager.GetNewItemListener(path);
-                mListeners.add(referenceToMatchListenerPair);
+                mListeners.add(new Pair<>(ref,fbManager.GetNewItemListener(path)));
 
 
             }
@@ -163,7 +162,7 @@ public class ChatListenerService extends Service {
             public void Init(DataSnapshot dss){
                 if(dss != null){
                     SetItem(GetFirebaseManager().GetHashTableItem(dss));
-                    GetBundle().putString("convoId", dss.getKey());
+                   PutString(Constants.BC_NEW_MSG_EXTRAS_CONVO_ID, dss.getKey());
                 }
             }
 
@@ -177,8 +176,7 @@ public class ChatListenerService extends Service {
                 final ChatMessage msg = dataSnapshot.getValue(ChatMessage.class);
 
                 Bundle extras = new Bundle();
-                extras.putString(Constants.BC_NEW_MSG_EXTRAS_CONVO_ID,
-                        (String) GetBundle().get("convoID"));
+                extras.putString(Constants.BC_NEW_MSG_EXTRAS_CONVO_ID, GetString(Constants.BC_NEW_MSG_EXTRAS_CONVO_ID));
                 extras.putString(Constants.BC_NEW_MSG_EXTRAS_TEXT, msg.getText());
                 extras.putSerializable(Constants.BC_NEW_MSG_EXTRAS_USER, serializedCurrUserObj);
                 extras.putString(Constants.BC_NEW_MSG_EXTRAS_SENDER, msg.getSender());
@@ -208,7 +206,7 @@ public class ChatListenerService extends Service {
                 NewItemListener newMsgListener
                         = generateOnlyNewMessageListener(dataSnapshot, serializedUserObj, fbManager);
 
-                if(!(this.__pair.value == null) && !(this.__pair.key == null)){
+                if(this.__pair.key != null){
                     this.__pair.value = this.__pair.key.addChildEventListener(newMsgListener);
                     referenceToListenerPairCache.add(this.__pair);
                 }

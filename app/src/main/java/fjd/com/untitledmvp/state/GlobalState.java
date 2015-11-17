@@ -64,9 +64,6 @@ public class GlobalState extends Application {
         Picasso.with(mCtx).setIndicatorsEnabled(true);
         mFBManager = new FirebaseManager(mCtx);
         //registerActivityLifecycleCallbacks(new ALC());
-        final Context ctx = getApplicationContext();
-        Util.StartService(ctx, Util.GetServiceIntent(ctx));
-
         //check for polling timer, stop if started
     }
 

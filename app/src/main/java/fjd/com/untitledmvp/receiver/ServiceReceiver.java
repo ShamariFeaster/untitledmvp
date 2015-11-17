@@ -7,6 +7,8 @@ import android.os.Bundle;
 
 import java.util.HashMap;
 
+import fjd.com.untitledmvp.activities.ChatActivity;
+import fjd.com.untitledmvp.activities.ChatListActivity;
 import fjd.com.untitledmvp.util.Constants;
 import fjd.com.untitledmvp.util.Util;
 
@@ -32,8 +34,11 @@ public class ServiceReceiver extends BroadcastReceiver{
                         Util.PostNotification(
                                 context,
                                 "You matched with " + extras.getString(Constants.BC_NEW_MATCH_EXTRAS_MATCH_FN),
-                                extras.getInt(Constants.BC_NEW_MATCH_EXTRAS_ICON)
+                                extras.getInt(Constants.BC_NEW_MATCH_EXTRAS_ICON),
+                                ChatListActivity.class
                         );
+                        this.setResultCode(Constants.BROADCAST_HANDLED);
+                        this.abortBroadcast();
                         break;
 
                     case Constants.BROADCAST_CODE_NEW_MESSAGE:
@@ -43,8 +48,11 @@ public class ServiceReceiver extends BroadcastReceiver{
                                 "New message from " + extras.getString(Constants.BC_NEW_MSG_EXTRAS_SENDER),
                                 extras.getString(Constants.BC_NEW_MSG_EXTRAS_TEXT),
                                 (HashMap) extras.getSerializable(Constants.BC_NEW_MSG_EXTRAS_USER),
-                                extras.getInt(Constants.BC_NEW_MSG_EXTRAS_ICON)
+                                extras.getInt(Constants.BC_NEW_MSG_EXTRAS_ICON),
+                                ChatActivity.class
                         );
+                        this.setResultCode(Constants.BROADCAST_HANDLED);
+                        this.abortBroadcast();
                         break;
                 }
 
