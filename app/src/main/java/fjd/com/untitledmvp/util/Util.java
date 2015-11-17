@@ -115,12 +115,13 @@ public class Util {
                 });
     }
 
-    public static void PostNotification(Context ctx, String text, int iconResource){
-        PostNotification(ctx, null,text,"Click To Open", null, iconResource );
+    public static void PostNotification(Context ctx, String text, int iconResource, Class<?> activityToOpen){
+        PostNotification(ctx, null,text,"Click To Open", null, iconResource, activityToOpen );
     }
 
     public static void PostNotification(Context ctx, String convoID, String title, String text,
-                                        HashMap<String, String> hm, int iconResource){
+                                        HashMap<String, String> hm, int iconResource,
+                                        Class<?> activityToOpen){
 
         int id = 0;
         if("ChatListenerService".equalsIgnoreCase(ctx.getClass().getSimpleName())){
@@ -132,22 +133,26 @@ public class Util {
                         .setSmallIcon(iconResource)
                         .setContentTitle(title)
                         .setContentText(text);
-        // Creates an explicit intent for an Activity in your app
-                Intent resultIntent = new Intent(ctx, ChatActivity.class);
-                if(convoID != null && !convoID.isEmpty()){
-                    resultIntent.putExtra(Constants.CONVO_KEY, convoID);
-                }
-                if(hm != null && !hm.isEmpty()){
-                    resultIntent.getExtras().putSerializable(Constants.CURR_USER_KEY, hm);
-                }
 
+        // Creates an explicit intent for an Activity in your app
+        Intent resultIntent = new Intent(ctx, activityToOpen);
+        Bundle bdl = new Bundle();
+        if(convoID != null && !convoID.isEmpty()){
+            bdl.putString(Constants.CONVO_KEY, convoID);
+        }
+
+        if(hm != null && !hm.isEmpty()){
+            bdl.putSerializable(Constants.CURR_USER_KEY, hm);
+        }
+
+        resultIntent.putExtras(bdl);
         // The stack builder object will contain an artificial back stack for the
         // started Activity.
         // This ensures that navigating backward from the Activity leads out of
         // your application to the Home screen.
                 TaskStackBuilder stackBuilder = TaskStackBuilder.create(ctx);
         // Adds the back stack for the Intent (but not the Intent itself)
-                stackBuilder.addParentStack(ChatActivity.class);
+                stackBuilder.addParentStack(activityToOpen);
         // Adds the Intent that starts the Activity to the top of the stack
                 stackBuilder.addNextIntent(resultIntent);
                 PendingIntent resultPendingIntent =
